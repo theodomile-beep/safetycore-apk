@@ -49,7 +49,7 @@ jobs:
           echo "ANDROIDAPI=30" >> $GITHUB_ENV
           echo "ANDROIDMINAPI=21" >> $GITHUB_ENV
 
-      - name: Build APK
+      - name: Build APK 
         run: |
           export ANDROID_SDK_ROOT=$HOME/android-sdk
           export ANDROID_HOME=$HOME/android-sdk
