@@ -5,10 +5,6 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  actions: write
-
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -17,27 +13,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y openjdk-17-jdk python3-pip git zip unzip wget
-          pip install buildozer cython
-
-      - name: Accept Android licenses
-        run: |
-          mkdir -p ~/.android
-          echo "### User Sources for Android SDK Manager" > ~/.android/repositories.cfg
-          echo "### User Sources for Android SDK Manager" > ~/.android/repositories.cfg
-          # Create a dummy license acceptance file
-          mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
-          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-          echo "84831b9409646a918e30573bab4c9c91346d8abd" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-
-      - name: Build APK
-        run: |
-          yes | buildozer android debug
+      - name: Build APK with Buildozer
+        uses: Artem-Shestakov/buildozer-action@v1
+        with:
+          command: buildozer android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
