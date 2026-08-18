@@ -25,43 +25,21 @@ jobs:
 
       - name: Setup Android SDK
         run: |
-          # Create SDK directory
           export ANDROID_SDK_ROOT=/home/runner/android-sdk
           mkdir -p $ANDROID_SDK_ROOT
           cd $ANDROID_SDK_ROOT
-
-          # Download command line tools
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
           unzip -q commandlinetools-linux-9477386_latest.zip
-
-          # Create tools directory (buildozer expects this path)
           mkdir -p tools
           mv cmdline-tools/* tools/
           rm -rf cmdline-tools
-
-          # Set path
           export PATH=$ANDROID_SDK_ROOT/tools/bin:$PATH
-
-          # Accept ALL licenses
           echo "y" | sdkmanager --licenses > /dev/null 2>&1 || true
-
-          # Install required packages
           echo "y" | sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3" > /dev/null 2>&1 || true
-
-          # Create the build-tools directory structure
-          mkdir -p $ANDROID_SDK_ROOT/build-tools/30.0.3
-          mkdir -p $ANDROID_SDK_ROOT/platforms/android-30
-
-          # Copy tools to buildozer location
           mkdir -p /home/runner/.buildozer/android/platform/android-sdk
           cp -r $ANDROID_SDK_ROOT/* /home/runner/.buildozer/android/platform/android-sdk/
-
-          # Set environment variables
           echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-          echo "ANDROIDAPI=30" >> $GITHUB_ENV
-          echo "ANDROIDMINAPI=21" >> $GITHUB_ENV
-          echo "PATH=$ANDROID_SDK_ROOT/tools/bin:$PATH" >> $GITHUB_ENV
 
       - name: Build APK
         run: |
@@ -70,8 +48,14 @@ jobs:
           export PATH=/home/runner/android-sdk/tools/bin:$PATH
           buildozer android debug 2>&1 | tee build.log
 
+      - name: Find APK
+        run: |
+          find . -name "*.apk" -type f
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: SafetyCore-APK
-          path: bin/*.apk
+          path: |
+            bin/*.apk
+            **/*.apk
