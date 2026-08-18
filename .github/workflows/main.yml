@@ -5,10 +5,6 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  actions: write
-
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -20,42 +16,15 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y openjdk-17-jdk python3-pip git zip unzip wget
+          sudo apt install -y openjdk-17-jdk python3-pip git zip unzip
           pip install buildozer cython
-
-      - name: Setup Android SDK
-        run: |
-          export ANDROID_SDK_ROOT=/home/runner/android-sdk
-          mkdir -p $ANDROID_SDK_ROOT
-          cd $ANDROID_SDK_ROOT
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-          unzip -q commandlinetools-linux-9477386_latest.zip
-          mkdir -p tools
-          mv cmdline-tools/* tools/
-          rm -rf cmdline-tools
-          export PATH=$ANDROID_SDK_ROOT/tools/bin:$PATH
-          echo "y" | sdkmanager --licenses > /dev/null 2>&1 || true
-          echo "y" | sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3" > /dev/null 2>&1 || true
-          mkdir -p /home/runner/.buildozer/android/platform/android-sdk
-          cp -r $ANDROID_SDK_ROOT/* /home/runner/.buildozer/android/platform/android-sdk/
-          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
 
       - name: Build APK
         run: |
-          export ANDROID_HOME=/home/runner/android-sdk
-          export ANDROID_SDK_ROOT=/home/runner/android-sdk
-          export PATH=/home/runner/android-sdk/tools/bin:$PATH
-          buildozer android debug 2>&1 | tee build.log
-
-      - name: Find APK
-        run: |
-          find . -name "*.apk" -type f
+          echo "y" | buildozer android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: SafetyCore-APK
-          path: |
-            bin/*.apk
-            **/*.apk
+          path: bin/*.apk
