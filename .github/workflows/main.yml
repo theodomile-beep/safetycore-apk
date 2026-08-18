@@ -23,18 +23,15 @@ jobs:
           sudo apt install -y openjdk-17-jdk python3-pip git zip unzip wget
           pip install buildozer cython
 
-      - name: Setup Android SDK
+      - name: Setup Android SDK with both build-tools versions
         run: |
-          # Create SDK directory
           export ANDROID_SDK_ROOT=$HOME/android-sdk
           mkdir -p $ANDROID_SDK_ROOT
           cd $ANDROID_SDK_ROOT
 
-          # Download command line tools
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
           unzip -q commandlinetools-linux-11076708_latest.zip
 
-          # Fix folder structure
           mkdir -p cmdline-tools
           mv cmdline-tools cmdline-tools/latest 2>/dev/null || true
           if [ ! -d "cmdline-tools/latest" ]; then
@@ -44,13 +41,13 @@ jobs:
 
           export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
 
-          # Accept licenses
+          # Accept all licenses
           yes | sdkmanager --licenses --sdk_root=$ANDROID_SDK_ROOT 2>/dev/null || true
 
-          # Install ONLY build-tools 30.0.3 (NOT 37.0.0)
-          yes | sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3" --sdk_root=$ANDROID_SDK_ROOT 2>/dev/null || true
+          # Install BOTH build-tools versions so buildozer doesn't complain
+          yes | sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3" "build-tools;37.0.0" --sdk_root=$ANDROID_SDK_ROOT 2>/dev/null || true
 
-          # Link to buildozer location
+          # Link SDK to buildozer's expected location
           rm -rf ~/.buildozer/android/platform/android-sdk
           mkdir -p ~/.buildozer/android/platform
           ln -s $ANDROID_SDK_ROOT ~/.buildozer/android/platform/android-sdk
