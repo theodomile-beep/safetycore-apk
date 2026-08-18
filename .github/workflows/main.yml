@@ -32,15 +32,20 @@ jobs:
           # Download command line tools
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
           unzip -q commandlinetools-linux-11076708_latest.zip
-          mkdir -p cmdline-tools/latest
-          mv cmdline-tools/* cmdline-tools/latest/
-          rm -rf cmdline-tools/latest/commandlinetools 2>/dev/null || true
+
+          # Fix: rename cmdline-tools to latest properly
+          mkdir -p cmdline-tools
+          mv cmdline-tools cmdline-tools/latest 2>/dev/null || true
+          # If the above fails, try this:
+          if [ ! -d "cmdline-tools/latest" ]; then
+            mkdir -p cmdline-tools/latest
+            mv cmdline-tools/* cmdline-tools/latest/ 2>/dev/null || true
+          fi
 
           export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
           yes | sdkmanager --licenses --sdk_root=$ANDROID_SDK_ROOT 2>/dev/null || true
           yes | sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3" --sdk_root=$ANDROID_SDK_ROOT 2>/dev/null || true
 
-          # Link SDK to buildozer's expected location
           rm -rf ~/.buildozer/android/platform/android-sdk
           mkdir -p ~/.buildozer/android/platform
           ln -s $ANDROID_SDK_ROOT ~/.buildozer/android/platform/android-sdk
@@ -48,14 +53,11 @@ jobs:
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
           echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
 
-      - name: Force build-tools version and build
+      - name: Build APK
         run: |
           export ANDROID_SDK_ROOT=$HOME/android-sdk
           export ANDROID_HOME=$HOME/android-sdk
           export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
-          # Force buildozer to use build-tools 30.0.3
-          export ANDROID_BUILD_TOOLS=30.0.3
-          # Remove the broken build-tools 37.0.0 if it exists
           rm -rf ~/.buildozer/android/platform/android-sdk/build-tools/37.0.0 2>/dev/null || true
           buildozer android debug
 
