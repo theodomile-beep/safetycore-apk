@@ -20,29 +20,47 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y openjdk-17-jdk python3-pip git zip unzip
+          sudo apt install -y openjdk-17-jdk python3-pip git zip unzip wget
           pip install buildozer cython
 
-      - name: Setup Android SDK with license acceptance
+      - name: Setup Android SDK with build-tools
         run: |
+          # Create SDK directory
           export ANDROID_SDK_ROOT=$HOME/android-sdk
           mkdir -p $ANDROID_SDK_ROOT
           cd $ANDROID_SDK_ROOT
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-          unzip -q commandlinetools-linux-9477386_latest.zip
-          mv cmdline-tools tools
-          export PATH=$ANDROID_SDK_ROOT/tools/bin:$PATH
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          yes | sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3" > /dev/null 2>&1 || true
+
+          # Download command line tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q commandlinetools-linux-11076708_latest.zip
+          mkdir -p cmdline-tools/latest
+          mv cmdline-tools/* cmdline-tools/latest/
+          rm -rf cmdline-tools/latest/commandlinetools 2>/dev/null || true
+
+          # Set path
+          export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
+
+          # Accept ALL licenses
+          yes | sdkmanager --licenses --sdk_root=$ANDROID_SDK_ROOT 2>/dev/null || true
+
+          # Install build-tools, platform-tools, and platform
+          yes | sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3" --sdk_root=$ANDROID_SDK_ROOT 2>/dev/null || true
+
+          # Create symlink for buildozer
           mkdir -p ~/.buildozer/android/platform/android-sdk
           cp -r $ANDROID_SDK_ROOT/* ~/.buildozer/android/platform/android-sdk/
-          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+
+          # Set environment variables
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "ANDROIDAPI=30" >> $GITHUB_ENV
+          echo "ANDROIDMINAPI=21" >> $GITHUB_ENV
 
       - name: Build APK
         run: |
-          export ANDROID_HOME=$HOME/android-sdk
           export ANDROID_SDK_ROOT=$HOME/android-sdk
+          export ANDROID_HOME=$HOME/android-sdk
+          export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
           buildozer android debug
 
       - name: Upload APK
