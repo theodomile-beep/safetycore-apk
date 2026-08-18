@@ -23,43 +23,21 @@ jobs:
           sudo apt install -y openjdk-17-jdk python3-pip git zip unzip wget
           pip install buildozer cython
 
-      - name: Setup Android SDK
+      - name: Accept Android licenses
         run: |
-          export ANDROID_SDK_ROOT=$HOME/android-sdk
-          mkdir -p $ANDROID_SDK_ROOT
-          cd $ANDROID_SDK_ROOT
-
-          # Download command line tools
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-          unzip -q commandlinetools-linux-11076708_latest.zip
-
-          # Fix: rename cmdline-tools to latest properly
-          mkdir -p cmdline-tools
-          mv cmdline-tools cmdline-tools/latest 2>/dev/null || true
-          # If the above fails, try this:
-          if [ ! -d "cmdline-tools/latest" ]; then
-            mkdir -p cmdline-tools/latest
-            mv cmdline-tools/* cmdline-tools/latest/ 2>/dev/null || true
-          fi
-
-          export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
-          yes | sdkmanager --licenses --sdk_root=$ANDROID_SDK_ROOT 2>/dev/null || true
-          yes | sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3" --sdk_root=$ANDROID_SDK_ROOT 2>/dev/null || true
-
-          rm -rf ~/.buildozer/android/platform/android-sdk
-          mkdir -p ~/.buildozer/android/platform
-          ln -s $ANDROID_SDK_ROOT ~/.buildozer/android/platform/android-sdk
-
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          mkdir -p ~/.android
+          echo "### User Sources for Android SDK Manager" > ~/.android/repositories.cfg
+          echo "### User Sources for Android SDK Manager" > ~/.android/repositories.cfg
+          # Create a dummy license acceptance file
+          mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
+          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+          echo "84831b9409646a918e30573bab4c9c91346d8abd" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
 
       - name: Build APK
         run: |
-          export ANDROID_SDK_ROOT=$HOME/android-sdk
-          export ANDROID_HOME=$HOME/android-sdk
-          export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
-          rm -rf ~/.buildozer/android/platform/android-sdk/build-tools/37.0.0 2>/dev/null || true
-          buildozer android debug
+          yes | buildozer android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
