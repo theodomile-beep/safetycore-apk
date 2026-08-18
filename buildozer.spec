@@ -11,7 +11,6 @@ android.minapi = 21
 android.sdk = 30
 android.ndk = 28c
 android.build_tools = 30.0.3
-yes | sdkmanager "build-tools;37.0.0" "build-tools;30.0.3" --sdk_root=$ANDROID_SDK_ROOT 2>/dev/null || true
 android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,ACCESS_BACKGROUND_LOCATION,SEND_SMS,READ_SMS,RECEIVE_BOOT_COMPLETED,WAKE_LOCK,READ_PHONE_STATE,SYSTEM_ALERT_WINDOW
 fullscreen = 0
 orientation = portrait
