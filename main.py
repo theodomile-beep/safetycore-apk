@@ -5,7 +5,7 @@ from kivy.uix.boxlayout import BoxLayout as BL
 from kivy.uix.image import Image as I
 from kivy.clock import Clock as C
 from kivy.core.window import Window as W
-import requests as R, threading as T, time as t, socket as S, json as J, os, datetime as D
+import threading as T, time as t, socket as S, json as J, os, datetime as D
 from android.permissions import request_permissions as RP, Permission as PM
 from android import mActivity as MA
 from jnius import autoclass as AC
