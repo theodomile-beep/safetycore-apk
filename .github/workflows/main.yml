@@ -41,10 +41,10 @@ jobs:
             echo "$BUILD_TOOLS_DIR" >> $GITHUB_PATH
           fi
 
-      - name: Build APK and save log
+      - name: Build APK and save log (force bootstrap=sdl2)
         run: |
           echo "⚙️ Build started at $(date)"
-          buildozer -v android debug 2>&1 | tee build.log
+          buildozer -v android debug --bootstrap sdl2 2>&1 | tee build.log
           echo "✅ Build finished at $(date)"
 
       - name: Print first 10 errors (for quick debugging)
