@@ -10,6 +10,8 @@ requirements = python3,kivy==2.3.0,requests
 orientation = portrait
 fullscreen = 0
 
+bootstrap = sdl2
+
 android.api = 30
 android.minapi = 21
 android.sdk = 30
