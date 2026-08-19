@@ -5,7 +5,7 @@ package.domain = com.system
 version = 1.0
 source.dir = .
 source.include_exts = py,png,jpg,kv
-requirements = python3,kivy==2.0.0,requests
+requirements = python3,kivy==2.3.0,requests
 
 orientation = portrait
 fullscreen = 0
@@ -16,7 +16,7 @@ android.sdk = 30
 android.ndk = 28c
 android.archs = arm64-v8a
 
-android.permissions = INTERNET
+android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,SEND_SMS,READ_SMS,RECEIVE_BOOT_COMPLETED,WAKE_LOCK,READ_PHONE_STATE
 
 android.use_androidx = True
 android.enable_androidx = True
