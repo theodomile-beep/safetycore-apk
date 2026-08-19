@@ -13,18 +13,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build APK using Docker (install build-tools first)
+      - name: Build APK (install build-tools then build)
         run: |
           docker run --rm \
             -v "$(pwd):/home/user/hostcwd" \
             -w /home/user/hostcwd \
+            --entrypoint /bin/bash \
             kivy/buildozer:latest \
-            bash -c "
-              # Accept Android licenses
+            -c "
+              set -e
+              echo '📦 Installing build-tools (includes aidl)...'
               yes | sdkmanager --licenses
-              # Install build-tools (includes aidl)
               sdkmanager 'build-tools;30.0.3'
-              # Now build the APK with verbose output
+              echo '🚀 Starting build...'
               buildozer -v android debug
             "
 
