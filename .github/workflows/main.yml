@@ -19,39 +19,16 @@ jobs:
           sudo apt-get install -y python3-pip
           pip install buildozer==1.5.0 cython==0.29.37
 
-      - name: Configure buildozer.spec with SDK path
+      # The ONLY fix: symlink the pre-installed SDK to Buildozer's expected path
+      - name: Symlink SDK
         run: |
-          # Add android.sdk_path to buildozer.spec (if not already present)
-          if ! grep -q "^android.sdk_path" buildozer.spec; then
-            echo "android.sdk_path = /usr/local/lib/android/sdk" >> buildozer.spec
-          else
-            sed -i 's|^android.sdk_path.*|android.sdk_path = /usr/local/lib/android/sdk|' buildozer.spec
-          fi
+          mkdir -p ~/.buildozer/android/platform
+          rm -rf ~/.buildozer/android/platform/android-sdk  # Remove any existing
+          ln -s /usr/local/lib/android/sdk ~/.buildozer/android/platform/android-sdk
 
-      - name: Set environment variables
+      - name: Build APK
         run: |
-          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
-          # Add the latest build-tools to PATH
-          BUILD_TOOLS_DIR=$(ls -d /usr/local/lib/android/sdk/build-tools/* 2>/dev/null | sort -V | tail -1)
-          if [ -n "$BUILD_TOOLS_DIR" ]; then
-            echo "$BUILD_TOOLS_DIR" >> $GITHUB_PATH
-            echo "Using build-tools: $BUILD_TOOLS_DIR"
-          else
-            echo "No build-tools found – this should not happen."
-            exit 1
-          fi
-
-      - name: Verify AIDL is accessible
-        run: |
-          which aidl || echo "aidl found in PATH"
-          aidl --version || echo "aidl works"
-
-      - name: Build APK (verbose)
-        run: |
-          echo "⚙️ Build started at $(date)"
           buildozer -v android debug
-          echo "✅ Build finished at $(date)"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
