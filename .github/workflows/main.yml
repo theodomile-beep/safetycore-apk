@@ -13,60 +13,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y openjdk-11-jdk python3-pip git zip unzip wget
-
-      - name: Install Android SDK (with symlink for Buildozer)
-        run: |
-          SDK_DIR="$HOME/.buildozer/android/platform/android-sdk"
-          mkdir -p "$SDK_DIR"
-          cd "$SDK_DIR"
-
-          # Download command-line tools
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-          unzip -q commandlinetools-linux-9477386_latest.zip -d tmp
-
-          # Move to cmdline-tools/latest
-          mkdir -p cmdline-tools/latest
-          mv tmp/cmdline-tools/* cmdline-tools/latest/
-          rm -rf tmp
-
-          # Make sdkmanager executable
-          chmod +x cmdline-tools/latest/bin/sdkmanager
-
-          # Create symlink so Buildozer finds sdkmanager at old path
-          ln -s cmdline-tools/latest tools
-
-          # Set environment
-          export ANDROID_HOME="$SDK_DIR"
-          export PATH="$PATH:$SDK_DIR/cmdline-tools/latest/bin:$SDK_DIR/platform-tools"
-
-          # Accept licenses and install build-tools
-          yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3"
-
-          # Verify
-          ls -l tools/bin/sdkmanager || echo "Symlink created"
-          ls -l build-tools/30.0.3/aidl || echo "AIDL installed"
-
-      - name: Set environment variables for Buildozer
-        run: |
-          echo "ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
-          echo "$HOME/.buildozer/android/platform/android-sdk/build-tools/30.0.3" >> $GITHUB_PATH
-
-      - name: Install Python build tools
-        run: |
-          pip install --upgrade pip
-          pip install buildozer==1.5.0 cython==0.29.37
-
-      - name: Build APK (verbose)
-        run: |
-          echo "⚙️ Build started at $(date)"
-          buildozer -v android debug
-          echo "✅ Build finished at $(date)"
+      - name: Build with Buildozer
+        uses: ArtemSBulgakov/buildozer-action@v1
+        id: buildozer
+        with:
+          working_directory: .
+          command: buildozer -v android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
