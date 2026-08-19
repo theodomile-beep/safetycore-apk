@@ -13,56 +13,42 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install system dependencies (fast)
+      - name: Install system dependencies
         run: |
           sudo apt-get update -y
           sudo apt-get install -y --no-install-recommends \
             openjdk-11-jdk python3-pip wget unzip
           pip install buildozer==1.5.0 cython==0.29.37
 
-      - name: Setup Android SDK (exact location Buildozer expects)
-        run: |
-          SDK_DIR="$HOME/.buildozer/android/platform/android-sdk"
-          mkdir -p "$SDK_DIR"
-          cd "$SDK_DIR"
-
-          # Download command-line tools
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-          unzip -q commandlinetools-linux-9477386_latest.zip -d tmp
-
-          # Structure: cmdline-tools/latest
-          mkdir -p cmdline-tools/latest
-          mv tmp/cmdline-tools/* cmdline-tools/latest/
-          rm -rf tmp
-
-          # Make sdkmanager executable
-          chmod +x cmdline-tools/latest/bin/sdkmanager
-
-          # Symlink so Buildozer finds it at old path
-          ln -s cmdline-tools/latest tools
-
-          # Accept licenses and install platform-tools + build-tools
-          export ANDROID_HOME="$SDK_DIR"
-          export PATH="$PATH:$SDK_DIR/cmdline-tools/latest/bin"
-          yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3"
-
-          # Verify aidl is installed
-          ls -l build-tools/30.0.3/aidl || echo "AIDL installed"
+      - name: Setup Android SDK (with build-tools)
+        uses: jborean93/setup-android-sdk@v3
+        with:
+          accept-licenses: true
+          platforms: android-30
+          build-tools: 30.0.3
+          cmdline-tools-version: 9477386
 
       - name: Set environment for Buildozer
         run: |
-          echo "ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
-          echo "$HOME/.buildozer/android/platform/android-sdk/build-tools/30.0.3" >> $GITHUB_PATH
+          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "$ANDROID_HOME/build-tools/30.0.3" >> $GITHUB_PATH
 
-      - name: Build APK (verbose output)
+      - name: Build APK with full log capture
+        id: build
         run: |
           echo "⚙️ Build started at $(date)"
-          buildozer -v android debug
+          buildozer -v android debug 2>&1 | tee build.log
           echo "✅ Build finished at $(date)"
 
+      - name: Show error if build failed
+        if: failure()
+        run: |
+          echo "❌ Build failed. Showing last 100 lines of build.log:"
+          tail -n 100 build.log
+
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: SafetyCore-APK
