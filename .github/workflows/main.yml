@@ -18,9 +18,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y openjdk-11-jdk python3-pip git zip unzip wget
 
-      - name: Install Android SDK into Buildozer's expected location
+      - name: Install Android SDK (with symlink for Buildozer)
         run: |
-          # Create the exact directory Buildozer expects
           SDK_DIR="$HOME/.buildozer/android/platform/android-sdk"
           mkdir -p "$SDK_DIR"
           cd "$SDK_DIR"
@@ -29,7 +28,7 @@ jobs:
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
           unzip -q commandlinetools-linux-9477386_latest.zip -d tmp
 
-          # Move to the correct structure (cmdline-tools/latest)
+          # Move to cmdline-tools/latest
           mkdir -p cmdline-tools/latest
           mv tmp/cmdline-tools/* cmdline-tools/latest/
           rm -rf tmp
@@ -37,7 +36,10 @@ jobs:
           # Make sdkmanager executable
           chmod +x cmdline-tools/latest/bin/sdkmanager
 
-          # Set environment for this step
+          # Create symlink so Buildozer finds sdkmanager at old path
+          ln -s cmdline-tools/latest tools
+
+          # Set environment
           export ANDROID_HOME="$SDK_DIR"
           export PATH="$PATH:$SDK_DIR/cmdline-tools/latest/bin:$SDK_DIR/platform-tools"
 
@@ -45,7 +47,8 @@ jobs:
           yes | sdkmanager --licenses
           sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3"
 
-          # Verify aidl is installed
+          # Verify
+          ls -l tools/bin/sdkmanager || echo "Symlink created"
           ls -l build-tools/30.0.3/aidl || echo "AIDL installed"
 
       - name: Set environment variables for Buildozer
