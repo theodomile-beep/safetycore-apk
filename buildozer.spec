@@ -16,7 +16,7 @@ android.sdk = 30
 android.ndk = 28c
 android.archs = arm64-v8a
 
-android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,SEND_SMS,READ_SMS,RECEIVE_BOOT_COMPLETED,WAKE_LOCK,READ_PHONE_STATE
+android.permissions = INTERNET
 
 android.use_androidx = True
 android.enable_androidx = True
