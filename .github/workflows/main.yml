@@ -1,15 +1,64 @@
 name: Build APK
-on: [push, workflow_dispatch]
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
 jobs:
   build:
-    runs-on: ubuntu-latest   # ← faster
+    runs-on: ubuntu-22.04
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Install deps
-        run: sudo apt-get update && sudo apt-get install -y openjdk-11-jdk python3-pip git zip unzip wget && pip install buildozer==1.5.0 cython==0.29.37
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openjdk-11-jdk python3-pip git zip unzip wget
+
+      - name: Install Android SDK (with build-tools)
+        run: |
+          # Download command-line tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+          unzip -q commandlinetools-linux-9477386_latest.zip
+          mkdir -p $HOME/android-sdk/cmdline-tools
+          mv cmdline-tools $HOME/android-sdk/cmdline-tools/latest
+
+          # Set environment variables
+          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
+          echo "$HOME/android-sdk/build-tools/30.0.3" >> $GITHUB_PATH
+
+          # Accept licenses and install required components
+          export ANDROID_HOME=$HOME/android-sdk
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3"
+
+      - name: Verify AIDL is installed
+        run: |
+          export ANDROID_HOME=$HOME/android-sdk
+          export PATH=$PATH:$ANDROID_HOME/build-tools/30.0.3
+          aidl --version || echo "AIDL not found – check paths"
+
+      - name: Install Python build tools
+        run: |
+          pip install --upgrade pip
+          pip install buildozer==1.5.0 cython==0.29.37
+
       - name: Build APK (verbose)
-        run: buildozer -v android debug
-      - uses: actions/upload-artifact@v4
+        run: |
+          export ANDROID_HOME=$HOME/android-sdk
+          export PATH=$PATH:$ANDROID_HOME/build-tools/30.0.3
+          echo "⚙️ Build started at $(date)"
+          buildozer -v android debug
+          echo "✅ Build finished at $(date)"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
           name: SafetyCore-APK
           path: bin/*.apk
