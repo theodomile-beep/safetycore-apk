@@ -13,10 +13,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Python dependencies
+      - name: Install Python and system dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y python3-pip
+          sudo apt-get install -y python3-pip autoconf automake libtool
           pip install buildozer==1.5.0 cython==0.29.37
 
       - name: Symlink SDK and fix sdkmanager path
@@ -45,30 +45,15 @@ jobs:
           buildozer -v android debug 2>&1 | tee build.log
           echo "✅ Build finished at $(date)"
 
-      - name: Extract and print ALL errors from log
+      - name: Extract and print errors
         if: always()
         run: |
           echo "=========================================="
-          echo "🔍 SEARCHING FOR ERRORS IN BUILD LOG"
-          echo "=========================================="
-          grep -E "ERROR:|Exception:|failed:|Traceback|OSError|ModuleNotFoundError|ImportError|FileNotFoundError|PermissionError|Error\b|Fail" build.log || echo "No errors found."
+          echo "🔍 ERRORS FOUND:"
+          grep -E "ERROR:|Exception:|failed:|Traceback" build.log || echo "No errors."
           echo "=========================================="
 
-      - name: Show context around the first Traceback
-        if: always()
-        run: |
-          LINE_NUM=$(grep -n "Traceback" build.log | head -1 | cut -d: -f1)
-          if [ -n "$LINE_NUM" ]; then
-            START=$((LINE_NUM - 20))
-            if [ $START -lt 0 ]; then START=0; fi
-            END=$((LINE_NUM + 30))
-            echo "=== CONTEXT AROUND FIRST TRACEBACK ==="
-            sed -n "${START},${END}p" build.log
-          else
-            echo "No Traceback found."
-          fi
-
-      - name: Find APK (anywhere)
+      - name: Find APK
         if: always()
         run: |
           APK_PATH=$(find . -name "*.apk" -type f | head -1)
@@ -79,7 +64,7 @@ jobs:
             echo "No APK found."
           fi
 
-      - name: Upload full build log (for debugging)
+      - name: Upload full build log
         if: always()
         uses: actions/upload-artifact@v4
         with:
