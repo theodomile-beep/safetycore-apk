@@ -5,7 +5,7 @@ package.domain = com.system
 version = 1.0
 source.dir = .
 source.include_exts = py,png,jpg,kv
-requirements = python3,kivy==2.1.0,requests==2.28.2,android==1.0,jnius==1.1.0,plyer==2.1
+requirements = python3,kivy==2.0.0,requests
 
 orientation = portrait
 fullscreen = 0
@@ -14,7 +14,7 @@ android.api = 30
 android.minapi = 21
 android.sdk = 30
 android.ndk = 28c
-android.archs = arm64-v8a, armeabi-v7a
+android.archs = arm64-v8a
 
 android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,SEND_SMS,READ_SMS,RECEIVE_BOOT_COMPLETED,WAKE_LOCK,READ_PHONE_STATE
 
