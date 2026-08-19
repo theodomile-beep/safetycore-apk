@@ -19,46 +19,29 @@ jobs:
           sudo apt-get install -y python3-pip
           pip install buildozer==1.5.0 cython==0.29.37
 
-      - name: Symlink pre-installed Android SDK to Buildozer's expected path
+      - name: Symlink pre-installed SDK to Buildozer's expected path
         run: |
-          # Buildozer looks in ~/.buildozer/android/platform/android-sdk
           mkdir -p ~/.buildozer/android/platform
           ln -sf /usr/local/lib/android/sdk ~/.buildozer/android/platform/android-sdk
 
-          # Find the build-tools version installed (e.g., 30.0.3, 31.0.0)
-          BUILD_TOOLS_DIR=$(ls -d /usr/local/lib/android/sdk/build-tools/* 2>/dev/null | head -1)
-          if [ -n "$BUILD_TOOLS_DIR" ]; then
-            echo "Found build-tools at: $BUILD_TOOLS_DIR"
-            echo "$BUILD_TOOLS_DIR" >> $GITHUB_PATH
-            # Also symlink the specific build-tools version to a known name? Not needed.
-          else
-            echo "No build-tools found, installing..."
-            # install sdkmanager if needed, but it's already there
-            export ANDROID_HOME=/usr/local/lib/android/sdk
-            export PATH=$PATH:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools
-            yes | sdkmanager "build-tools;30.0.3"
-          fi
-
-          # Verify aidl exists
-          AIDL_PATH=$(find ~/.buildozer/android/platform/android-sdk -name aidl -type f 2>/dev/null | head -1)
-          if [ -n "$AIDL_PATH" ]; then
-            echo "AIDL found at: $AIDL_PATH"
-          else
-            echo "AIDL still not found, installing build-tools manually..."
-            export ANDROID_HOME=/usr/local/lib/android/sdk
-            export PATH=$PATH:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools
-            yes | sdkmanager "build-tools;30.0.3"
-          fi
-
-      - name: Set environment variables for Buildozer
+      - name: Set environment variables and PATH
         run: |
           echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
-          # Add build-tools to PATH
-          BUILD_TOOLS_DIR=$(ls -d /usr/local/lib/android/sdk/build-tools/* 2>/dev/null | head -1)
+          # Add build-tools to PATH (the latest version)
+          BUILD_TOOLS_DIR=$(ls -d /usr/local/lib/android/sdk/build-tools/* 2>/dev/null | sort -V | tail -1)
           if [ -n "$BUILD_TOOLS_DIR" ]; then
             echo "$BUILD_TOOLS_DIR" >> $GITHUB_PATH
+            echo "Using build-tools: $BUILD_TOOLS_DIR"
+          else
+            echo "No build-tools found – this should not happen on ubuntu-latest runner."
+            exit 1
           fi
+
+      - name: Verify AIDL is accessible
+        run: |
+          which aidl || echo "aidl found in PATH"
+          aidl --version || echo "aidl works"
 
       - name: Build APK (verbose)
         run: |
