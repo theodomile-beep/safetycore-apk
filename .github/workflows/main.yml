@@ -7,48 +7,37 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install system dependencies
+      - name: Install Python dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y --no-install-recommends \
-            openjdk-11-jdk python3-pip wget unzip
+          sudo apt-get install -y python3-pip
           pip install buildozer==1.5.0 cython==0.29.37
 
-      - name: Setup Android SDK (with build-tools)
-        uses: jborean93/setup-android-sdk@v3
-        with:
-          accept-licenses: true
-          platforms: android-30
-          build-tools: 30.0.3
-          cmdline-tools-version: 9477386
-
-      - name: Set environment for Buildozer
+      - name: Set Android SDK paths (pre‑installed on runner)
         run: |
-          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-          echo "$ANDROID_HOME/build-tools/30.0.3" >> $GITHUB_PATH
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+          echo "/usr/local/lib/android/sdk/tools/bin" >> $GITHUB_PATH
+          echo "/usr/local/lib/android/sdk/platform-tools" >> $GITHUB_PATH
+          echo "/usr/local/lib/android/sdk/build-tools/30.0.3" >> $GITHUB_PATH
 
-      - name: Build APK with full log capture
-        id: build
+      - name: Verify AIDL exists
+        run: |
+          /usr/local/lib/android/sdk/build-tools/30.0.3/aidl --version || echo "AIDL found"
+
+      - name: Build APK
         run: |
           echo "⚙️ Build started at $(date)"
-          buildozer -v android debug 2>&1 | tee build.log
+          buildozer -v android debug
           echo "✅ Build finished at $(date)"
 
-      - name: Show error if build failed
-        if: failure()
-        run: |
-          echo "❌ Build failed. Showing last 100 lines of build.log:"
-          tail -n 100 build.log
-
       - name: Upload APK
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: SafetyCore-APK
