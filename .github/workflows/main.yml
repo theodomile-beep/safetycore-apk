@@ -51,10 +51,22 @@ jobs:
           echo "=========================================="
           echo "🔍 SEARCHING FOR ERRORS IN BUILD LOG"
           echo "=========================================="
-          grep -E "ERROR:|Exception:|failed:|Traceback|OSError|ModuleNotFoundError|ImportError|FileNotFoundError|PermissionError" build.log || echo "No errors found."
+          grep -E "ERROR:|Exception:|failed:|Traceback|OSError|ModuleNotFoundError|ImportError|FileNotFoundError|PermissionError|Error\b|Fail" build.log || echo "No errors found."
           echo "=========================================="
-          echo "If no errors listed above, the build may have succeeded."
-          echo "Check the APK upload step below."
+
+      - name: Show context around the first Traceback
+        if: always()
+        run: |
+          LINE_NUM=$(grep -n "Traceback" build.log | head -1 | cut -d: -f1)
+          if [ -n "$LINE_NUM" ]; then
+            START=$((LINE_NUM - 20))
+            if [ $START -lt 0 ]; then START=0; fi
+            END=$((LINE_NUM + 30))
+            echo "=== CONTEXT AROUND FIRST TRACEBACK ==="
+            sed -n "${START},${END}p" build.log
+          else
+            echo "No Traceback found."
+          fi
 
       - name: Find APK (anywhere)
         if: always()
