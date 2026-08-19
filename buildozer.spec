@@ -4,22 +4,24 @@ package.name = core
 package.domain = com.system
 version = 1.0
 source.dir = .
-source.include_exts = py,png,jpg
-requirements = python3,kivy,requests
+source.include_exts = py,png,jpg,kv
+requirements = python3,kivy,requests,android,jnius,plyer
+
+orientation = portrait
+fullscreen = 0
+
 android.api = 30
 android.minapi = 21
 android.sdk = 30
-android.ndk = 28c
+android.ndk = 25b
+android.archs = arm64-v8a, armeabi-v7a
+
 android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,SEND_SMS,READ_SMS,RECEIVE_BOOT_COMPLETED,WAKE_LOCK,READ_PHONE_STATE
-fullscreen = 0
-orientation = portrait
-android.orientation = portrait
-android.debug = True
+
 android.use_androidx = True
-android.add_src = 
-    <receiver android:name=".BootReceiver" android:enabled="true" android:exported="true">
-        <intent-filter>
-            <action android:name="android.intent.action.BOOT_COMPLETED" />
-            <action android:name="android.intent.action.QUICKBOOT_POWERON" />
-        </intent-filter>
-    </receiver>
+android.enable_androidx = True
+
+[buildozer]
+log_level = 2
+warn_on_root = 1
+android.accept_sdk_license = True
