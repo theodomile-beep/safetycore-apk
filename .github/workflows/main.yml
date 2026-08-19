@@ -21,7 +21,7 @@ jobs:
 
       - name: Build APK (verbose output)
         run: |
-          echo "⏱️ Build started at $(date)"
+          echo "⚙️ Build started at $(date)"
           buildozer -v android debug
           echo "✅ Build finished at $(date)"
 
