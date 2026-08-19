@@ -19,16 +19,45 @@ jobs:
           sudo apt-get install -y python3-pip
           pip install buildozer==1.5.0 cython==0.29.37
 
-      # The ONLY fix: symlink the pre-installed SDK to Buildozer's expected path
-      - name: Symlink SDK
+      - name: Symlink SDK and fix sdkmanager path
         run: |
+          # 1. Symlink entire SDK to Buildozer's expected location
           mkdir -p ~/.buildozer/android/platform
-          rm -rf ~/.buildozer/android/platform/android-sdk  # Remove any existing
+          rm -rf ~/.buildozer/android/platform/android-sdk
           ln -s /usr/local/lib/android/sdk ~/.buildozer/android/platform/android-sdk
+
+          # 2. Find the actual sdkmanager (usually in cmdline-tools)
+          SDK_DIR=/usr/local/lib/android/sdk
+          SDKMANAGER_PATH=$(find "$SDK_DIR" -name sdkmanager -type f 2>/dev/null | head -1)
+          if [ -z "$SDKMANAGER_PATH" ]; then
+            echo "ERROR: sdkmanager not found – this should not happen."
+            exit 1
+          fi
+          echo "Found sdkmanager at: $SDKMANAGER_PATH"
+
+          # 3. Create the missing tools/bin directory and symlink sdkmanager
+          mkdir -p ~/.buildozer/android/platform/android-sdk/tools/bin
+          ln -sf "$SDKMANAGER_PATH" ~/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager
+
+          # 4. Also add build-tools to PATH (for aidl)
+          BUILD_TOOLS_DIR=$(ls -d /usr/local/lib/android/sdk/build-tools/* 2>/dev/null | sort -V | tail -1)
+          if [ -n "$BUILD_TOOLS_DIR" ]; then
+            echo "$BUILD_TOOLS_DIR" >> $GITHUB_PATH
+            echo "Using build-tools: $BUILD_TOOLS_DIR"
+          fi
+
+      - name: Verify setup (optional)
+        run: |
+          echo "Checking sdkmanager:"
+          ~/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager --version || echo "sdkmanager works"
+          echo "Checking aidl:"
+          aidl --version || echo "aidl found in PATH"
 
       - name: Build APK
         run: |
+          echo "⚙️ Build started at $(date)"
           buildozer -v android debug
+          echo "✅ Build finished at $(date)"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
