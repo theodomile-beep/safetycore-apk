@@ -45,14 +45,18 @@ jobs:
           buildozer -v android debug 2>&1 | tee build.log
           echo "✅ Build finished at $(date)"
 
-      - name: Print last 200 lines of log (shows real error)
+      - name: Extract and print ALL errors from log
         if: always()
         run: |
-          echo "=== LAST 200 LINES OF BUILD LOG ==="
-          tail -n 200 build.log
-          echo "==================================="
+          echo "=========================================="
+          echo "🔍 SEARCHING FOR ERRORS IN BUILD LOG"
+          echo "=========================================="
+          grep -E "ERROR:|Exception:|failed:|Traceback|OSError|ModuleNotFoundError|ImportError|FileNotFoundError|PermissionError" build.log || echo "No errors found."
+          echo "=========================================="
+          echo "If no errors listed above, the build may have succeeded."
+          echo "Check the APK upload step below."
 
-      - name: Find and upload any APK
+      - name: Find APK (anywhere)
         if: always()
         run: |
           APK_PATH=$(find . -name "*.apk" -type f | head -1)
@@ -63,7 +67,7 @@ jobs:
             echo "No APK found."
           fi
 
-      - name: Upload full build log
+      - name: Upload full build log (for debugging)
         if: always()
         uses: actions/upload-artifact@v4
         with:
