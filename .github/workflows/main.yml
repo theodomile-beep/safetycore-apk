@@ -13,42 +13,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Skip apt update – use pre‑installed packages
-      - name: Install only missing tools
+      - name: Build APK using pre‑built Buildozer Docker image
         run: |
-          sudo apt-get install -y --no-install-recommends python3-pip
-          pip install --upgrade pip
-          pip install buildozer==1.5.0 cython==0.29.37
-
-      - name: Install Android SDK (fast)
-        run: |
-          SDK_DIR="$HOME/.buildozer/android/platform/android-sdk"
-          mkdir -p "$SDK_DIR"
-          cd "$SDK_DIR"
-
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-          unzip -q commandlinetools-linux-9477386_latest.zip -d tmp
-          mkdir -p cmdline-tools/latest
-          mv tmp/cmdline-tools/* cmdline-tools/latest/
-          rm -rf tmp
-          chmod +x cmdline-tools/latest/bin/sdkmanager
-          ln -s cmdline-tools/latest tools
-
-          export ANDROID_HOME="$SDK_DIR"
-          export PATH="$PATH:$SDK_DIR/cmdline-tools/latest/bin"
-          yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3"
-
-      - name: Set environment for Buildozer
-        run: |
-          echo "ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
-          echo "$HOME/.buildozer/android/platform/android-sdk/build-tools/30.0.3" >> $GITHUB_PATH
-
-      - name: Build APK (verbose)
-        run: |
-          echo "⚙️ Build started at $(date)"
-          buildozer -v android debug
-          echo "✅ Build finished at $(date)"
+          docker run --rm \
+            -v "$(pwd):/home/user/hostcwd" \
+            -w /home/user/hostcwd \
+            kivy/buildozer:latest \
+            buildozer -v android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
