@@ -45,6 +45,13 @@ jobs:
           buildozer -v android debug 2>&1 | tee build.log
           echo "✅ Build finished at $(date)"
 
+          - name: Print first 10 errors
+  if: always()
+  run: |
+    echo "===== FIRST 10 ERRORS ====="
+    grep -E "ERROR:|Exception:|failed:|Traceback" build.log | head -n 10
+    echo "==========================="
+
       - name: Extract APK generation and errors
         if: always()
         run: |
