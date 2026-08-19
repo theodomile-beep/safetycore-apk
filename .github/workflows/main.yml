@@ -15,9 +15,7 @@ jobs:
 
       - name: Build with Buildozer
         uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
         with:
-          working_directory: .
           command: buildozer -v android debug
 
       - name: Upload APK
