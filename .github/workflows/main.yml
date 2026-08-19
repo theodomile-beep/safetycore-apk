@@ -13,18 +13,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Python and system dependencies
+      - name: Install system dependencies
         run: |
           sudo apt-get update -y
           sudo apt-get install -y python3-pip autoconf automake libtool
           pip install buildozer==1.5.0 cython==0.29.37
 
-      - name: Symlink SDK and fix sdkmanager path
+      - name: Symlink pre-installed SDK to Buildozer's expected path
         run: |
           mkdir -p ~/.buildozer/android/platform
           rm -rf ~/.buildozer/android/platform/android-sdk
           ln -s /usr/local/lib/android/sdk ~/.buildozer/android/platform/android-sdk
 
+          # Fix sdkmanager path for Buildozer
           SDK_DIR=/usr/local/lib/android/sdk
           SDKMANAGER_PATH=$(find "$SDK_DIR" -name sdkmanager -type f 2>/dev/null | head -1)
           if [ -z "$SDKMANAGER_PATH" ]; then
@@ -34,6 +35,7 @@ jobs:
           mkdir -p ~/.buildozer/android/platform/android-sdk/tools/bin
           ln -sf "$SDKMANAGER_PATH" ~/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager
 
+          # Add build-tools to PATH
           BUILD_TOOLS_DIR=$(ls -d /usr/local/lib/android/sdk/build-tools/* 2>/dev/null | sort -V | tail -1)
           if [ -n "$BUILD_TOOLS_DIR" ]; then
             echo "$BUILD_TOOLS_DIR" >> $GITHUB_PATH
@@ -45,25 +47,22 @@ jobs:
           buildozer -v android debug 2>&1 | tee build.log
           echo "✅ Build finished at $(date)"
 
-          - name: Print first 10 errors
-  if: always()
-  run: |
-    echo "===== FIRST 10 ERRORS ====="
-    grep -E "ERROR:|Exception:|failed:|Traceback" build.log | head -n 10
-    echo "==========================="
-
-      - name: Extract APK generation and errors
+      - name: Print first 10 errors (for quick debugging)
         if: always()
         run: |
-          echo "===== APK GENERATION LINES ====="
-          grep -i "apk" build.log | grep -i "generated\|creating\|package" || echo "No APK generation lines found."
-          echo "================================="
-          echo "===== LAST 30 LINES ====="
-          tail -n 30 build.log
-          echo "================================="
-          echo "===== SEARCHING FOR APK FILES ====="
+          echo "===== FIRST 10 ERRORS ====="
+          grep -E "ERROR:|Exception:|failed:|Traceback" build.log | head -n 10 || echo "No errors found."
+          echo "==========================="
+
+      - name: Search for APK anywhere
+        if: always()
+        run: |
+          echo "===== SEARCHING FOR APK ====="
           find . -name "*.apk" -type f -exec ls -lh {} \; || echo "No APK found."
-          echo "================================="
+          APK_PATH=$(find . -name "*.apk" -type f | head -1)
+          if [ -n "$APK_PATH" ]; then
+            echo "APK_FOUND=$APK_PATH" >> $GITHUB_ENV
+          fi
 
       - name: Upload full build log
         if: always()
@@ -71,12 +70,12 @@ jobs:
         with:
           name: build-log
           path: build.log
-          overwrite: true   # ✅ fixes the conflict
+          overwrite: true
 
-      - name: Upload APK if found
-        if: success() && hashFiles('**/*.apk') != ''
+      - name: Upload APK (if found)
+        if: success() && env.APK_FOUND != ''
         uses: actions/upload-artifact@v4
         with:
           name: SafetyCore-APK
-          path: '**/*.apk'
+          path: ${{ env.APK_FOUND }}
           overwrite: true
