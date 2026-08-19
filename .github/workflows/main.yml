@@ -45,23 +45,15 @@ jobs:
           buildozer -v android debug 2>&1 | tee build.log
           echo "✅ Build finished at $(date)"
 
-      - name: 🔍 Extract APK generation line
+      - name: Extract APK generation and errors
         if: always()
         run: |
           echo "===== APK GENERATION LINES ====="
           grep -i "apk" build.log | grep -i "generated\|creating\|package" || echo "No APK generation lines found."
           echo "================================="
-
-      - name: 📄 Print last 30 lines (shows final status)
-        if: always()
-        run: |
-          echo "===== LAST 30 LINES OF LOG ====="
+          echo "===== LAST 30 LINES ====="
           tail -n 30 build.log
           echo "================================="
-
-      - name: 📁 List all APK files (anywhere)
-        if: always()
-        run: |
           echo "===== SEARCHING FOR APK FILES ====="
           find . -name "*.apk" -type f -exec ls -lh {} \; || echo "No APK found."
           echo "================================="
@@ -72,9 +64,12 @@ jobs:
         with:
           name: build-log
           path: build.log
-      - name: Upload full build log
-        if: always()
+          overwrite: true   # ✅ fixes the conflict
+
+      - name: Upload APK if found
+        if: success() && hashFiles('**/*.apk') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: build-log
-          path: build.log
+          name: SafetyCore-APK
+          path: '**/*.apk'
+          overwrite: true
