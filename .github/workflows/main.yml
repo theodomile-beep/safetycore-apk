@@ -21,37 +21,28 @@ jobs:
 
       - name: Symlink SDK and fix sdkmanager path
         run: |
-          # Symlink entire SDK to Buildozer's expected location
           mkdir -p ~/.buildozer/android/platform
           rm -rf ~/.buildozer/android/platform/android-sdk
           ln -s /usr/local/lib/android/sdk ~/.buildozer/android/platform/android-sdk
 
-          # Find the actual sdkmanager (usually in cmdline-tools)
           SDK_DIR=/usr/local/lib/android/sdk
           SDKMANAGER_PATH=$(find "$SDK_DIR" -name sdkmanager -type f 2>/dev/null | head -1)
           if [ -z "$SDKMANAGER_PATH" ]; then
-            echo "ERROR: sdkmanager not found – this should not happen."
+            echo "ERROR: sdkmanager not found"
             exit 1
           fi
-          echo "Found sdkmanager at: $SDKMANAGER_PATH"
-
-          # Create the missing tools/bin directory and symlink sdkmanager
           mkdir -p ~/.buildozer/android/platform/android-sdk/tools/bin
           ln -sf "$SDKMANAGER_PATH" ~/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager
 
-          # Add build-tools to PATH
           BUILD_TOOLS_DIR=$(ls -d /usr/local/lib/android/sdk/build-tools/* 2>/dev/null | sort -V | tail -1)
           if [ -n "$BUILD_TOOLS_DIR" ]; then
             echo "$BUILD_TOOLS_DIR" >> $GITHUB_PATH
-            echo "Using build-tools: $BUILD_TOOLS_DIR"
           fi
 
       - name: Verify setup
         run: |
-          echo "=== sdkmanager ==="
-          ~/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager --version || echo "sdkmanager works"
-          echo "=== aidl ==="
-          aidl --version || echo "aidl found in PATH"
+          ~/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager --version || echo "sdkmanager ok"
+          aidl --version || echo "aidl ok"
 
       - name: Build APK with full log capture
         id: build
@@ -60,6 +51,20 @@ jobs:
           buildozer -v android debug 2>&1 | tee build.log
           echo "✅ Build finished at $(date)"
 
+      - name: Find APK files
+        if: always()
+        run: |
+          echo "Searching for APK files in entire workspace:"
+          find . -name "*.apk" -type f -exec ls -lh {} \;
+          # Store the path in an environment variable if found
+          APK_PATH=$(find . -name "*.apk" -type f | head -1)
+          if [ -n "$APK_PATH" ]; then
+            echo "APK_FOUND=$APK_PATH" >> $GITHUB_ENV
+            echo "APK found at: $APK_PATH"
+          else
+            echo "No APK found."
+          fi
+
       - name: Show error if build failed
         if: failure()
         run: |
@@ -67,8 +72,15 @@ jobs:
           tail -n 200 build.log
 
       - name: Upload APK
-        if: success()
+        if: success() && env.APK_FOUND != ''
         uses: actions/upload-artifact@v4
         with:
           name: SafetyCore-APK
+          path: ${{ env.APK_FOUND }}
+
+      - name: Fallback upload (if APK found in bin/)
+        if: success() && hashFiles('bin/*.apk') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: SafetyCore-APK-fallback
           path: bin/*.apk
