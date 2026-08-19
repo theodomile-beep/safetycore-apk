@@ -13,10 +13,65 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build with Buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1
-        with:
-          command: buildozer -v android debug
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update --fix-missing
+          sudo apt-get install -y --no-install-recommends \
+            openjdk-11-jdk \
+            python3-pip \
+            git \
+            zip \
+            unzip \
+            wget
+
+      - name: Install Python packages
+        run: |
+          pip install --upgrade pip
+          pip install buildozer==1.5.0 cython==0.29.37
+
+      - name: Install Android SDK (Buildozer expects it in ~/.buildozer/android/platform/android-sdk)
+        run: |
+          SDK_DIR="$HOME/.buildozer/android/platform/android-sdk"
+          mkdir -p "$SDK_DIR"
+          cd "$SDK_DIR"
+
+          # Download command-line tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+          unzip -q commandlinetools-linux-9477386_latest.zip -d tmp
+
+          # Move to the correct structure: cmdline-tools/latest
+          mkdir -p cmdline-tools/latest
+          mv tmp/cmdline-tools/* cmdline-tools/latest/
+          rm -rf tmp
+
+          # Make sdkmanager executable
+          chmod +x cmdline-tools/latest/bin/sdkmanager
+
+          # Create symlink so Buildozer finds it at the old path
+          ln -s cmdline-tools/latest tools
+
+          # Set environment for this step
+          export ANDROID_HOME="$SDK_DIR"
+          export PATH="$PATH:$SDK_DIR/cmdline-tools/latest/bin:$SDK_DIR/platform-tools"
+
+          # Accept licenses and install required components
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3"
+
+          # Verify aidl exists
+          ls -l build-tools/30.0.3/aidl
+
+      - name: Set environment variables for Buildozer
+        run: |
+          echo "ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
+          echo "$HOME/.buildozer/android/platform/android-sdk/build-tools/30.0.3" >> $GITHUB_PATH
+
+      - name: Build APK (verbose)
+        run: |
+          echo "⚙️ Build started at $(date)"
+          buildozer -v android debug
+          echo "✅ Build finished at $(date)"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
