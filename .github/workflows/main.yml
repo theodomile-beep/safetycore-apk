@@ -39,28 +39,39 @@ jobs:
             echo "$BUILD_TOOLS_DIR" >> $GITHUB_PATH
           fi
 
-      - name: Build APK and save full log
+      - name: Build APK and save log
         run: |
           echo "⚙️ Build started at $(date)"
           buildozer -v android debug 2>&1 | tee build.log
           echo "✅ Build finished at $(date)"
 
-      - name: Check for APK in the log and file system
+      - name: 🔍 Extract APK generation line
         if: always()
         run: |
-          echo "=========================================="
-          echo "📦 SEARCHING FOR APK REFERENCES IN LOG"
-          grep -i "apk" build.log || echo "No 'apk' in log."
-          echo "=========================================="
-          echo "📁 LISTING BUILD OUTPUT DIRECTORIES"
-          find .buildozer -type f -name "*.apk" 2>/dev/null || echo "No APK in .buildozer"
-          echo "=========================================="
-          echo "📁 LISTING BIN DIRECTORY"
-          ls -la bin/ 2>/dev/null || echo "bin/ not found"
-          echo "=========================================="
-          echo "📁 SEARCHING ENTIRE WORKSPACE FOR APK"
-          find . -name "*.apk" -type f 2>/dev/null || echo "No APK found anywhere."
+          echo "===== APK GENERATION LINES ====="
+          grep -i "apk" build.log | grep -i "generated\|creating\|package" || echo "No APK generation lines found."
+          echo "================================="
 
+      - name: 📄 Print last 30 lines (shows final status)
+        if: always()
+        run: |
+          echo "===== LAST 30 LINES OF LOG ====="
+          tail -n 30 build.log
+          echo "================================="
+
+      - name: 📁 List all APK files (anywhere)
+        if: always()
+        run: |
+          echo "===== SEARCHING FOR APK FILES ====="
+          find . -name "*.apk" -type f -exec ls -lh {} \; || echo "No APK found."
+          echo "================================="
+
+      - name: Upload full build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
       - name: Upload full build log
         if: always()
         uses: actions/upload-artifact@v4
