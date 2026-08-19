@@ -1,42 +1,15 @@
 name: Build APK
-
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
-
+on: [push, workflow_dispatch]
 jobs:
   build:
-    runs-on: ubuntu-20.04   # stable, fast mirrors
-
+    runs-on: ubuntu-latest   # ← faster
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Fix apt sources (remove Azure mirrors)
-        run: |
-          sudo sed -i 's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' /etc/apt/sources.list
-          sudo apt-get update
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get install -y --no-install-recommends \
-            openjdk-11-jdk \
-            python3-pip \
-            git \
-            zip \
-            unzip \
-            wget
-          pip install --no-cache-dir buildozer==1.5.0 cython==0.29.37
-
-      - name: Build APK (verbose output)
-        run: |
-          echo "⚙️ Build started at $(date)"
-          buildozer -v android debug
-          echo "✅ Build finished at $(date)"
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      - uses: actions/checkout@v4
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y openjdk-11-jdk python3-pip git zip unzip wget && pip install buildozer==1.5.0 cython==0.29.37
+      - name: Build APK (verbose)
+        run: buildozer -v android debug
+      - uses: actions/upload-artifact@v4
         with:
           name: SafetyCore-APK
           path: bin/*.apk
