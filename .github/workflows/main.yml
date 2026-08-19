@@ -45,15 +45,14 @@ jobs:
           buildozer -v android debug 2>&1 | tee build.log
           echo "✅ Build finished at $(date)"
 
-      - name: Extract and show errors (no browser crash)
+      - name: Print last 200 lines of log (shows real error)
         if: always()
         run: |
-          echo "=== ERRORS AND EXCEPTIONS ==="
-          grep -E "ERROR:|Exception:|failed:|Traceback" build.log || echo "No obvious errors found."
-          echo "=============================="
-          echo "Full log saved as build.log (download artifact)."
+          echo "=== LAST 200 LINES OF BUILD LOG ==="
+          tail -n 200 build.log
+          echo "==================================="
 
-      - name: Find APK
+      - name: Find and upload any APK
         if: always()
         run: |
           APK_PATH=$(find . -name "*.apk" -type f | head -1)
