@@ -13,13 +13,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build with Docker (pre-installed SDK)
+      - name: Build with Docker (install build-tools first)
         run: |
           docker run --rm \
             -v "$(pwd):/app" \
             -w /app \
+            --entrypoint /bin/bash \
             kivy/buildozer \
-            android debug
+            -c "
+              echo '📦 Installing build-tools...'
+              yes | sdkmanager --licenses
+              sdkmanager 'build-tools;30.0.3'
+              echo '🚀 Building APK...'
+              buildozer android debug
+            "
 
       - name: Upload APK
         if: success()
