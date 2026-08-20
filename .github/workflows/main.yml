@@ -7,16 +7,17 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install dependencies (with fixed autotools)
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-pip openjdk-17-jdk git zip unzip wget autoconf automake libtool autoconf-archive pkg-config
+          sudo apt-get install -y python3-pip openjdk-17-jdk git zip unzip wget
+          sudo apt-get install -y autoconf=2.69-11 automake=1:1.16.1-4ubuntu6 libtool=2.4.6-9 autoconf-archive pkg-config
           pip install buildozer cython
 
       - name: NUKE EVERYTHING
@@ -54,24 +55,6 @@ jobs:
           echo "⚙️ Build started at $(date)"
           buildozer -v android debug 2>&1 | tee build.log
           echo "✅ Build finished at $(date)"
-
-      - name: SHOW ERROR WITH CONTEXT
-        if: always()
-        run: |
-          echo "========================================="
-          echo "🔴 ERROR WITH CONTEXT:"
-          echo "========================================="
-          LINE=$(grep -n "Traceback" build.log | head -1 | cut -d: -f1)
-          if [ -n "$LINE" ]; then
-            START=$((LINE - 15))
-            if [ $START -lt 0 ]; then START=0; fi
-            END=$((LINE + 5))
-            echo "Showing lines $START to $END from build.log:"
-            sed -n "${START},${END}p" build.log
-          else
-            echo "No Traceback found."
-          fi
-          echo "========================================="
 
       - name: Find APK
         if: always()
