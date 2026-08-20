@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
@@ -16,16 +16,19 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-pip openjdk-17-jdk git zip unzip wget autoconf automake libtool pkg-config
+          sudo apt-get install -y python3-pip openjdk-17-jdk git zip unzip wget
           pip install buildozer cython
 
-      - name: Clean build cache
+      - name: NUKE EVERYTHING
         run: |
           rm -rf ~/.buildozer
           rm -rf .buildozer
           rm -rf bin
+          rm -f build.log
+          rm -rf ~/.cache/pip
+          rm -rf ~/.local/share/buildozer
 
-      - name: Accept SDK licenses
+      - name: Accept Android SDK licenses
         run: |
           export ANDROID_HOME=/usr/local/lib/android/sdk
           export PATH=$PATH:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools
@@ -34,11 +37,13 @@ jobs:
       - name: Symlink SDK
         run: |
           mkdir -p ~/.buildozer/android/platform
-          ln -s /usr/local/lib/android/sdk ~/.buildozer/android/platform/android-sdk
+          ln -sf /usr/local/lib/android/sdk ~/.buildozer/android/platform/android-sdk
 
       - name: Build APK
         run: |
+          echo "⚙️ Build started at $(date)"
           buildozer -v android debug 2>&1 | tee build.log
+          echo "✅ Build finished at $(date)"
 
       - name: Upload APK
         if: success()
