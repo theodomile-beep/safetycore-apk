@@ -53,13 +53,22 @@ jobs:
         run: |
           buildozer -v android debug 2>&1 | tee build.log
 
-      - name: SHOW ERRORS ONLY
+      - name: SHOW ERROR WITH CONTEXT
         if: always()
         run: |
           echo "========================================="
-          echo "🔴 ERRORS FOUND IN BUILD:"
+          echo "🔴 ERROR WITH CONTEXT:"
           echo "========================================="
-          grep -E "ERROR:|Exception:|failed:|Traceback|Error\b" build.log | head -n 30
+          LINE=$(grep -n "Traceback" build.log | head -1 | cut -d: -f1)
+          if [ -n "$LINE" ]; then
+            START=$((LINE - 15))
+            if [ $START -lt 0 ]; then START=0; fi
+            END=$((LINE + 5))
+            echo "Showing lines $START to $END from build.log:"
+            sed -n "${START},${END}p" build.log
+          else
+            echo "No Traceback found."
+          fi
           echo "========================================="
           echo "✅ If nothing shows above, no errors found."
           echo "========================================="
@@ -80,7 +89,7 @@ jobs:
           path: ${{ env.APK_FOUND }}
           overwrite: true
 
-      - name: Upload build log (if you need it)
+      - name: Upload build log
         if: always()
         uses: actions/upload-artifact@v4
         with:
