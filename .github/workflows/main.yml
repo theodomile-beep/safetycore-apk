@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build with Docker (complete SDK setup)
+      - name: Build with Docker
         run: |
           docker run --rm \
             -v "$(pwd):/app" \
@@ -21,34 +21,24 @@ jobs:
             --entrypoint /bin/bash \
             kivy/buildozer \
             -c "
-              echo '📦 Setting up SDK manually...'
-              export ANDROID_HOME=/root/.buildozer/android/platform/android-sdk
-              mkdir -p \$ANDROID_HOME
-              
-              echo '📦 Downloading command-line tools...'
+              # Install SDK tools
               wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
               unzip -q commandlinetools-linux-9477386_latest.zip
-              mkdir -p \$ANDROID_HOME/cmdline-tools
-              mv cmdline-tools \$ANDROID_HOME/cmdline-tools/latest
+              mkdir -p /root/.buildozer/android/platform/android-sdk/cmdline-tools
+              mv cmdline-tools /root/.buildozer/android/platform/android-sdk/cmdline-tools/latest
               
-              # Add sdkmanager to PATH
-              export PATH=\$ANDROID_HOME/cmdline-tools/latest/bin:\$PATH
+              # Set PATH
+              export PATH=/root/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin:\$PATH
               
-              echo '📦 Accepting licenses...'
-              yes | sdkmanager --licenses 2>/dev/null || true
+              # Accept licenses and install build-tools
+              yes | sdkmanager --licenses
+              sdkmanager 'build-tools;30.0.3'
               
-              echo '📦 Installing build-tools 30.0.3...'
-              sdkmanager 'build-tools;30.0.3' 2>/dev/null || echo 'Build-tools installed'
+              # Create symlink for sdkmanager
+              mkdir -p /root/.buildozer/android/platform/android-sdk/tools/bin
+              ln -sf /root/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager /root/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager
               
-              # Create the EXACT path Buildozer expects: tools/bin/sdkmanager
-              echo '📦 Creating symlink for sdkmanager...'
-              mkdir -p \$ANDROID_HOME/tools/bin
-              ln -sf \$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \$ANDROID_HOME/tools/bin/sdkmanager
-              
-              echo '📦 Verifying sdkmanager path...'
-              ls -la \$ANDROID_HOME/tools/bin/sdkmanager
-              
-              echo '🚀 Building APK...'
+              # Build APK
               buildozer android debug
             "
 
