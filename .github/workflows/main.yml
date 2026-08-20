@@ -7,13 +7,13 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest   # fastest runner assignment
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Fix apt sources (remove slow Azure mirrors)
+      - name: Fix apt sources
         run: |
           sudo sed -i 's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' /etc/apt/sources.list
           sudo apt-get update
@@ -23,7 +23,7 @@ jobs:
           sudo apt-get install -y python3-pip autoconf automake libtool
           pip install buildozer==1.5.0 cython==0.29.37
 
-      - name: Symlink pre-installed SDK to Buildozer's expected path
+      - name: Symlink pre-installed SDK
         run: |
           mkdir -p ~/.buildozer/android/platform
           rm -rf ~/.buildozer/android/platform/android-sdk
@@ -43,25 +43,25 @@ jobs:
             echo "$BUILD_TOOLS_DIR" >> $GITHUB_PATH
           fi
 
-      - name: CLEAN ALL BUILD CACHES (force fresh build)
+      - name: CLEAN ALL BUILD CACHES
         run: |
           rm -rf ~/.buildozer/cache
           rm -rf .buildozer
           rm -f build.log
 
-      - name: Verify buildozer.spec
+      - name: Verify buildozer.spec (print it)
         run: |
-          echo "=== buildozer.spec contents ==="
+          echo "=== CONTENTS OF buildozer.spec ==="
           cat buildozer.spec
-          echo "==============================="
+          echo "================================="
 
-      - name: Build APK
+      - name: Build APK (force bootstrap)
         run: |
           echo "⚙️ Build started at $(date)"
           buildozer -v android debug --bootstrap sdl2 2>&1 | tee build.log
           echo "✅ Build finished at $(date)"
 
-      - name: Print first 10 errors (if any)
+      - name: Print first 10 errors
         if: always()
         run: |
           echo "===== FIRST 10 ERRORS ====="
@@ -79,7 +79,7 @@ jobs:
             echo "No APK found."
           fi
 
-      - name: Upload full build log
+      - name: Upload build log
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -87,7 +87,7 @@ jobs:
           path: build.log
           overwrite: true
 
-      - name: Upload APK (if found)
+      - name: Upload APK
         if: success() && env.APK_FOUND != ''
         uses: actions/upload-artifact@v4
         with:
