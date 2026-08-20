@@ -7,90 +7,45 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Fix apt sources
+      - name: Install dependencies
         run: |
-          sudo sed -i 's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' /etc/apt/sources.list
           sudo apt-get update
+          sudo apt-get install -y python3-pip openjdk-17-jdk git zip unzip wget autoconf automake libtool pkg-config
+          pip install buildozer cython
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get install -y python3-pip autoconf automake libtool
-          pip install buildozer==1.5.0 cython==0.29.37
-
-      - name: NUKE ALL CACHES
+      - name: Clean build cache
         run: |
           rm -rf ~/.buildozer
           rm -rf .buildozer
           rm -rf bin
-          rm -f build.log
 
-      - name: Accept Android SDK licenses
+      - name: Accept SDK licenses
         run: |
           export ANDROID_HOME=/usr/local/lib/android/sdk
           export PATH=$PATH:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools
           yes | sdkmanager --licenses || true
-          sdkmanager "build-tools;30.0.3" || true
 
       - name: Symlink SDK
         run: |
           mkdir -p ~/.buildozer/android/platform
           ln -s /usr/local/lib/android/sdk ~/.buildozer/android/platform/android-sdk
 
-          SDK_DIR=/usr/local/lib/android/sdk
-          SDKMANAGER_PATH=$(find "$SDK_DIR" -name sdkmanager -type f 2>/dev/null | head -1)
-          if [ -z "$SDKMANAGER_PATH" ]; then
-            echo "ERROR: sdkmanager not found"
-            exit 1
-          fi
-          mkdir -p ~/.buildozer/android/platform/android-sdk/tools/bin
-          ln -sf "$SDKMANAGER_PATH" ~/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager
-
-          BUILD_TOOLS_DIR=$(ls -d /usr/local/lib/android/sdk/build-tools/* 2>/dev/null | sort -V | tail -1)
-          if [ -n "$BUILD_TOOLS_DIR" ]; then
-            echo "$BUILD_TOOLS_DIR" >> $GITHUB_PATH
-          fi
-
-      - name: Force bootstrap
+      - name: Build APK
         run: |
-          mkdir -p .buildozer
-          echo "[app]" > .buildozer/default.spec
-          echo "bootstrap = sdl2" >> .buildozer/default.spec
-
-      - name: Verify spec
-        run: |
-          echo "=== buildozer.spec ==="
-          cat buildozer.spec
-          echo "======================"
-
-      - name: Build APK (timeout 20 min)
-        run: |
-          echo "⚙️ Build started at $(date)"
           buildozer -v android debug 2>&1 | tee build.log
-          echo "✅ Build finished at $(date)"
 
-      - name: Print errors
-        if: always()
-        run: |
-          echo "===== FIRST 10 ERRORS ====="
-          grep -E "ERROR:|Exception:|failed:|Traceback" build.log | head -n 10 || echo "No errors."
-          echo "==========================="
-
-      - name: Search for APK
-        if: always()
-        run: |
-          APK_PATH=$(find . -name "*.apk" -type f | head -1)
-          if [ -n "$APK_PATH" ]; then
-            echo "APK_FOUND=$APK_PATH" >> $GITHUB_ENV
-            echo "APK found at: $APK_PATH"
-          else
-            echo "No APK found."
-          fi
+      - name: Upload APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SafetyCore-APK
+          path: bin/*.apk
 
       - name: Upload build log
         if: always()
@@ -98,12 +53,3 @@ jobs:
         with:
           name: build-log
           path: build.log
-          overwrite: true
-
-      - name: Upload APK
-        if: success() && env.APK_FOUND != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: SafetyCore-APK
-          path: ${{ env.APK_FOUND }}
-          overwrite: true
