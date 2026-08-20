@@ -49,38 +49,28 @@ jobs:
           export PATH=$PATH:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools
           yes | sdkmanager --licenses || true
 
-      - name: Build APK with full error printing
+      - name: Build APK
         run: |
-          echo "⚙️ Build started at $(date)"
           buildozer -v android debug 2>&1 | tee build.log
-          echo "✅ Build finished at $(date)"
-          echo "=========================================="
-          echo "🔍 ERRORS FOUND IN BUILD LOG:"
-          echo "=========================================="
-          grep -E "ERROR:|Exception:|failed:|Traceback|Error\b" build.log | head -n 20 || echo "No errors found."
-          echo "=========================================="
-          echo "📄 LAST 50 LINES OF BUILD LOG:"
-          echo "=========================================="
-          tail -n 50 build.log
 
-      - name: Search for APK
+      - name: SHOW ERRORS ONLY
+        if: always()
+        run: |
+          echo "========================================="
+          echo "🔴 ERRORS FOUND IN BUILD:"
+          echo "========================================="
+          grep -E "ERROR:|Exception:|failed:|Traceback|Error\b" build.log | head -n 30
+          echo "========================================="
+          echo "✅ If nothing shows above, no errors found."
+          echo "========================================="
+
+      - name: Find APK
         if: always()
         run: |
           APK_PATH=$(find . -name "*.apk" -type f | head -1)
           if [ -n "$APK_PATH" ]; then
             echo "APK_FOUND=$APK_PATH" >> $GITHUB_ENV
-            echo "APK found at: $APK_PATH"
-          else
-            echo "No APK found."
           fi
-
-      - name: Upload build log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log
-          path: build.log
-          overwrite: true
 
       - name: Upload APK
         if: success() && env.APK_FOUND != ''
@@ -88,4 +78,12 @@ jobs:
         with:
           name: SafetyCore-APK
           path: ${{ env.APK_FOUND }}
+          overwrite: true
+
+      - name: Upload build log (if you need it)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
           overwrite: true
