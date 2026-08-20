@@ -25,19 +25,33 @@ jobs:
           rm -rf .buildozer
           rm -rf bin
           rm -f build.log
-          rm -rf ~/.cache/pip
-          rm -rf ~/.local/share/buildozer
+
+      - name: Symlink SDK with correct sdkmanager path
+        run: |
+          # Create the directory structure Buildozer expects
+          mkdir -p ~/.buildozer/android/platform
+          ln -sf /usr/local/lib/android/sdk ~/.buildozer/android/platform/android-sdk
+
+          # Find the actual sdkmanager
+          SDK_DIR=/usr/local/lib/android/sdk
+          SDKMANAGER_PATH=$(find "$SDK_DIR" -name sdkmanager -type f 2>/dev/null | head -1)
+          echo "Found sdkmanager at: $SDKMANAGER_PATH"
+
+          # Create the tools/bin directory and symlink sdkmanager
+          mkdir -p ~/.buildozer/android/platform/android-sdk/tools/bin
+          ln -sf "$SDKMANAGER_PATH" ~/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager
+
+          # Also add build-tools to PATH
+          BUILD_TOOLS_DIR=$(ls -d /usr/local/lib/android/sdk/build-tools/* 2>/dev/null | sort -V | tail -1)
+          if [ -n "$BUILD_TOOLS_DIR" ]; then
+            echo "$BUILD_TOOLS_DIR" >> $GITHUB_PATH
+          fi
 
       - name: Accept Android SDK licenses
         run: |
           export ANDROID_HOME=/usr/local/lib/android/sdk
           export PATH=$PATH:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools
           yes | sdkmanager --licenses || true
-
-      - name: Symlink SDK
-        run: |
-          mkdir -p ~/.buildozer/android/platform
-          ln -sf /usr/local/lib/android/sdk ~/.buildozer/android/platform/android-sdk
 
       - name: Build APK
         run: |
