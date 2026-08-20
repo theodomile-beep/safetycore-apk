@@ -23,13 +23,23 @@ jobs:
           sudo apt-get install -y python3-pip autoconf automake libtool
           pip install buildozer==1.5.0 cython==0.29.37
 
-      - name: NUKE all Buildozer caches (including ~/.buildozer)
+      - name: NUKE all Buildozer caches
         run: |
           rm -rf ~/.buildozer
           rm -rf .buildozer
           rm -f build.log
 
-      - name: Symlink pre-installed SDK (fresh after nuke)
+      - name: Force bootstrap sdl2 in Buildozer config
+        run: |
+          mkdir -p ~/.buildozer
+          cat > ~/.buildozer/default.spec <<EOF
+[app]
+bootstrap = sdl2
+EOF
+          echo "=== Forced bootstrap in ~/.buildozer/default.spec ==="
+          cat ~/.buildozer/default.spec
+
+      - name: Symlink pre-installed SDK
         run: |
           mkdir -p ~/.buildozer/android/platform
           ln -s /usr/local/lib/android/sdk ~/.buildozer/android/platform/android-sdk
@@ -48,23 +58,18 @@ jobs:
             echo "$BUILD_TOOLS_DIR" >> $GITHUB_PATH
           fi
 
-      - name: Verify and fix buildozer.spec
+      - name: Verify buildozer.spec
         run: |
-          echo "=== Current buildozer.spec ==="
+          echo "=== buildozer.spec contents ==="
           cat buildozer.spec
-          echo "============================="
-          echo "=== Checking bootstrap line ==="
-          grep bootstrap buildozer.spec || echo "bootstrap line missing!"
-          # Ensure bootstrap = sdl2
-          sed -i 's/^bootstrap.*/bootstrap = sdl2/' buildozer.spec
-          echo "=== After sed fix ==="
-          grep bootstrap buildozer.spec
+          echo "==============================="
+          echo "=== bootstrap line ==="
+          grep bootstrap buildozer.spec || echo "bootstrap line missing"
 
-      - name: Build APK (force bootstrap via environment variable)
+      - name: Build APK (force bootstrap via config)
         run: |
-          export BUILDOZER_BOOTSTRAP=sdl2
           echo "⚙️ Build started at $(date)"
-          buildozer -v android debug 2>&1 | tee build.log
+          buildozer -v android debug --bootstrap sdl2 2>&1 | tee build.log
           echo "✅ Build finished at $(date)"
 
       - name: Print first 10 errors
