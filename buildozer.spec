@@ -5,7 +5,7 @@ package.domain = com.system
 version = 1.0
 source.dir = .
 source.include_exts = py,png,jpg,kv
-requirements = python3,kivy==2.3.0,requests,pyjnius,android
+requirements = python3,kivy==2.3.0,requests
 
 orientation = portrait
 fullscreen = 0
