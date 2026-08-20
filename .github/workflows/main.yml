@@ -16,7 +16,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-pip openjdk-17-jdk git zip unzip wget
+          sudo apt-get install -y python3-pip openjdk-17-jdk git zip unzip wget autoconf automake libtool autoconf-archive pkg-config
           pip install buildozer cython
 
       - name: NUKE EVERYTHING
@@ -51,7 +51,9 @@ jobs:
 
       - name: Build APK
         run: |
+          echo "⚙️ Build started at $(date)"
           buildozer -v android debug 2>&1 | tee build.log
+          echo "✅ Build finished at $(date)"
 
       - name: SHOW ERROR WITH CONTEXT
         if: always()
@@ -70,8 +72,6 @@ jobs:
             echo "No Traceback found."
           fi
           echo "========================================="
-          echo "✅ If nothing shows above, no errors found."
-          echo "========================================="
 
       - name: Find APK
         if: always()
@@ -79,15 +79,10 @@ jobs:
           APK_PATH=$(find . -name "*.apk" -type f | head -1)
           if [ -n "$APK_PATH" ]; then
             echo "APK_FOUND=$APK_PATH" >> $GITHUB_ENV
+            echo "APK found at: $APK_PATH"
+          else
+            echo "No APK found."
           fi
-
-      - name: Upload APK
-        if: success() && env.APK_FOUND != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: SafetyCore-APK
-          path: ${{ env.APK_FOUND }}
-          overwrite: true
 
       - name: Upload build log
         if: always()
@@ -95,4 +90,12 @@ jobs:
         with:
           name: build-log
           path: build.log
+          overwrite: true
+
+      - name: Upload APK
+        if: success() && env.APK_FOUND != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: SafetyCore-APK
+          path: ${{ env.APK_FOUND }}
           overwrite: true
