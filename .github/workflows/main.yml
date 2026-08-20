@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build with Docker (fix sdkmanager path)
+      - name: Build with Docker (force specific build-tools)
         run: |
           docker run --rm \
             -v "$(pwd):/app" \
@@ -25,9 +25,17 @@ jobs:
               SDKMANAGER=\$(find / -name sdkmanager -type f 2>/dev/null | head -1)
               echo \"Found sdkmanager at: \$SDKMANAGER\"
               
-              echo '📦 Installing build-tools...'
+              echo '📦 Accepting all licenses...'
               yes | \$SDKMANAGER --licenses
+              
+              echo '📦 Installing build-tools 30.0.3 (not 37)...'
               \$SDKMANAGER 'build-tools;30.0.3'
+              
+              echo '📦 Installing platform-tools...'
+              \$SDKMANAGER 'platform-tools'
+              
+              echo '📦 Installing platforms;android-30...'
+              \$SDKMANAGER 'platforms;android-30'
               
               echo '🚀 Building APK...'
               buildozer android debug
