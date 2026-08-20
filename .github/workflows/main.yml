@@ -15,8 +15,34 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-pip openjdk-17-jdk zip unzip
+          sudo apt-get install -y python3-pip openjdk-17-jdk zip unzip wget
           pip install buildozer cython
+
+      - name: Setup Android SDK (auto-accept license)
+        run: |
+          mkdir -p ~/.buildozer/android/platform
+          cd ~/.buildozer/android/platform
+
+          # Download and setup command-line tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+          unzip -q commandlinetools-linux-9477386_latest.zip
+          mkdir -p android-sdk/cmdline-tools
+          mv cmdline-tools android-sdk/cmdline-tools/latest
+
+          # Accept ALL licenses
+          export ANDROID_HOME=$(pwd)/android-sdk
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
+
+          # Auto-accept licenses
+          yes | sdkmanager --licenses
+
+          # Install specific build-tools version (not 37)
+          sdkmanager "build-tools;30.0.3" "platforms;android-30" "platform-tools"
+
+      - name: Set environment
+        run: |
+          echo "ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
+          echo "$HOME/.buildozer/android/platform/android-sdk/build-tools/30.0.3" >> $GITHUB_PATH
 
       - name: Build APK
         run: buildozer android debug
