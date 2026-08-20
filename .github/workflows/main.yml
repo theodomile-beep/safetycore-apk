@@ -23,10 +23,15 @@ jobs:
           sudo apt-get install -y python3-pip autoconf automake libtool
           pip install buildozer==1.5.0 cython==0.29.37
 
-      - name: Symlink pre-installed SDK
+      - name: NUKE all Buildozer caches (including ~/.buildozer)
+        run: |
+          rm -rf ~/.buildozer
+          rm -rf .buildozer
+          rm -f build.log
+
+      - name: Symlink pre-installed SDK (fresh after nuke)
         run: |
           mkdir -p ~/.buildozer/android/platform
-          rm -rf ~/.buildozer/android/platform/android-sdk
           ln -s /usr/local/lib/android/sdk ~/.buildozer/android/platform/android-sdk
 
           SDK_DIR=/usr/local/lib/android/sdk
@@ -43,22 +48,23 @@ jobs:
             echo "$BUILD_TOOLS_DIR" >> $GITHUB_PATH
           fi
 
-      - name: CLEAN ALL BUILD CACHES
+      - name: Verify and fix buildozer.spec
         run: |
-          rm -rf ~/.buildozer/cache
-          rm -rf .buildozer
-          rm -f build.log
-
-      - name: Verify buildozer.spec (print it)
-        run: |
-          echo "=== CONTENTS OF buildozer.spec ==="
+          echo "=== Current buildozer.spec ==="
           cat buildozer.spec
-          echo "================================="
+          echo "============================="
+          echo "=== Checking bootstrap line ==="
+          grep bootstrap buildozer.spec || echo "bootstrap line missing!"
+          # Ensure bootstrap = sdl2
+          sed -i 's/^bootstrap.*/bootstrap = sdl2/' buildozer.spec
+          echo "=== After sed fix ==="
+          grep bootstrap buildozer.spec
 
-      - name: Build APK (force bootstrap)
+      - name: Build APK (force bootstrap via environment variable)
         run: |
+          export BUILDOZER_BOOTSTRAP=sdl2
           echo "⚙️ Build started at $(date)"
-          buildozer -v android debug --bootstrap sdl2 2>&1 | tee build.log
+          buildozer -v android debug 2>&1 | tee build.log
           echo "✅ Build finished at $(date)"
 
       - name: Print first 10 errors
