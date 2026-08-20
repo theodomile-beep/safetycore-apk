@@ -7,13 +7,13 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest   # fastest runner assignment
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Fix apt sources
+      - name: Fix apt sources (remove slow Azure mirrors)
         run: |
           sudo sed -i 's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' /etc/apt/sources.list
           sudo apt-get update
@@ -23,7 +23,7 @@ jobs:
           sudo apt-get install -y python3-pip autoconf automake libtool
           pip install buildozer==1.5.0 cython==0.29.37
 
-      - name: Symlink pre-installed SDK
+      - name: Symlink pre-installed SDK to Buildozer's expected path
         run: |
           mkdir -p ~/.buildozer/android/platform
           rm -rf ~/.buildozer/android/platform/android-sdk
@@ -43,17 +43,17 @@ jobs:
             echo "$BUILD_TOOLS_DIR" >> $GITHUB_PATH
           fi
 
-      - name: COMPLETE CLEAN – remove all Buildozer caches
+      - name: CLEAN ALL BUILD CACHES (force fresh build)
         run: |
           rm -rf ~/.buildozer/cache
           rm -rf .buildozer
           rm -f build.log
 
-      - name: Verify buildozer.spec contents
+      - name: Verify buildozer.spec
         run: |
-          echo "=== CONTENTS OF buildozer.spec ==="
+          echo "=== buildozer.spec contents ==="
           cat buildozer.spec
-          echo "================================="
+          echo "==============================="
 
       - name: Build APK
         run: |
@@ -61,7 +61,7 @@ jobs:
           buildozer -v android debug --bootstrap sdl2 2>&1 | tee build.log
           echo "✅ Build finished at $(date)"
 
-      - name: Print first 10 errors
+      - name: Print first 10 errors (if any)
         if: always()
         run: |
           echo "===== FIRST 10 ERRORS ====="
@@ -79,7 +79,7 @@ jobs:
             echo "No APK found."
           fi
 
-      - name: Upload build log
+      - name: Upload full build log
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -87,7 +87,7 @@ jobs:
           path: build.log
           overwrite: true
 
-      - name: Upload APK
+      - name: Upload APK (if found)
         if: success() && env.APK_FOUND != ''
         uses: actions/upload-artifact@v4
         with:
