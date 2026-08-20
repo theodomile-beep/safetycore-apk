@@ -32,10 +32,8 @@ jobs:
       - name: Force bootstrap sdl2 in Buildozer config
         run: |
           mkdir -p ~/.buildozer
-          cat > ~/.buildozer/default.spec <<EOF
-[app]
-bootstrap = sdl2
-EOF
+          echo "[app]" > ~/.buildozer/default.spec
+          echo "bootstrap = sdl2" >> ~/.buildozer/default.spec
           echo "=== Forced bootstrap in ~/.buildozer/default.spec ==="
           cat ~/.buildozer/default.spec
 
@@ -66,7 +64,7 @@ EOF
           echo "=== bootstrap line ==="
           grep bootstrap buildozer.spec || echo "bootstrap line missing"
 
-      - name: Build APK (force bootstrap via config)
+      - name: Build APK (force bootstrap)
         run: |
           echo "⚙️ Build started at $(date)"
           buildozer -v android debug --bootstrap sdl2 2>&1 | tee build.log
