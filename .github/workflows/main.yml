@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout code
@@ -21,25 +21,21 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get install -y python3-pip autoconf automake libtool
-          pip install buildozer==1.5.0 cython==0.29.37
+          # Use Buildozer 1.4.0 (no sd12 bug)
+          pip install buildozer==1.4.0 cython==0.29.37
 
-      - name: NUKE all Buildozer caches
+      - name: Create .buildozer/default.spec to force bootstrap
         run: |
-          rm -rf ~/.buildozer
-          rm -rf .buildozer
-          rm -f build.log
-
-      - name: Force bootstrap sdl2 in Buildozer config
-        run: |
-          mkdir -p ~/.buildozer
-          echo "[app]" > ~/.buildozer/default.spec
-          echo "bootstrap = sdl2" >> ~/.buildozer/default.spec
-          echo "=== Forced bootstrap in ~/.buildozer/default.spec ==="
-          cat ~/.buildozer/default.spec
+          mkdir -p .buildozer
+          echo "[app]" > .buildozer/default.spec
+          echo "bootstrap = sdl2" >> .buildozer/default.spec
+          echo "=== .buildozer/default.spec contents ==="
+          cat .buildozer/default.spec
 
       - name: Symlink pre-installed SDK
         run: |
           mkdir -p ~/.buildozer/android/platform
+          rm -rf ~/.buildozer/android/platform/android-sdk
           ln -s /usr/local/lib/android/sdk ~/.buildozer/android/platform/android-sdk
 
           SDK_DIR=/usr/local/lib/android/sdk
@@ -58,16 +54,16 @@ jobs:
 
       - name: Verify buildozer.spec
         run: |
-          echo "=== buildozer.spec contents ==="
+          echo "=== buildozer.spec ==="
           cat buildozer.spec
-          echo "==============================="
+          echo "======================"
           echo "=== bootstrap line ==="
-          grep bootstrap buildozer.spec || echo "bootstrap line missing"
+          grep bootstrap buildozer.spec
 
-      - name: Build APK (force bootstrap)
+      - name: Build APK (using Buildozer 1.4.0)
         run: |
           echo "⚙️ Build started at $(date)"
-          buildozer -v android debug --bootstrap sdl2 2>&1 | tee build.log
+          buildozer -v android debug 2>&1 | tee build.log
           echo "✅ Build finished at $(date)"
 
       - name: Print first 10 errors
