@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build with Docker (install build-tools first)
+      - name: Build with Docker (fix sdkmanager path)
         run: |
           docker run --rm \
             -v "$(pwd):/app" \
@@ -21,9 +21,14 @@ jobs:
             --entrypoint /bin/bash \
             kivy/buildozer \
             -c "
+              echo '📦 Finding sdkmanager...'
+              SDKMANAGER=\$(find / -name sdkmanager -type f 2>/dev/null | head -1)
+              echo \"Found sdkmanager at: \$SDKMANAGER\"
+              
               echo '📦 Installing build-tools...'
-              yes | sdkmanager --licenses
-              sdkmanager 'build-tools;30.0.3'
+              yes | \$SDKMANAGER --licenses
+              \$SDKMANAGER 'build-tools;30.0.3'
+              
               echo '🚀 Building APK...'
               buildozer android debug
             "
