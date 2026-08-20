@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
@@ -49,10 +50,16 @@ jobs:
           export PATH=$PATH:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools
           yes | sdkmanager --licenses || true
 
-      - name: Build APK
+      - name: Build APK with progress tracking
         run: |
           echo "⚙️ Build started at $(date)"
-          buildozer -v android debug 2>&1 | tee build.log
+          buildozer -v android debug 2>&1 | tee build.log &
+          PID=$!
+          while kill -0 $PID 2>/dev/null; do
+            echo "⏳ Build still running... $(date)"
+            sleep 60
+          done
+          wait $PID
           echo "✅ Build finished at $(date)"
 
       - name: Find APK
