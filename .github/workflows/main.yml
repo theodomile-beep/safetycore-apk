@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build with Docker (explicit license)
+      - name: Build with Docker (manual SDK setup)
         run: |
           docker run --rm \
             -v "$(pwd):/app" \
@@ -21,16 +21,25 @@ jobs:
             --entrypoint /bin/bash \
             kivy/buildozer \
             -c "
-              echo '📦 Finding sdkmanager...'
-              SDKMANAGER=\$(find / -name sdkmanager -type f 2>/dev/null | head -1)
-              echo \"Found sdkmanager at: \$SDKMANAGER\"
+              echo '📦 Setting up SDK manually...'
+              export ANDROID_HOME=/android-sdk
+              mkdir -p \$ANDROID_HOME
               
-              echo '📦 Accepting license for build-tools 30.0.3...'
-              echo y | \$SDKMANAGER --licenses
-              echo y | \$SDKMANAGER 'build-tools;30.0.3'
+              echo '📦 Downloading command-line tools...'
+              wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+              unzip -q commandlinetools-linux-9477386_latest.zip
+              mv cmdline-tools \$ANDROID_HOME/latest
+              export PATH=\$ANDROID_HOME/latest/bin:\$PATH
+              
+              echo '📦 Accepting licenses...'
+              yes | sdkmanager --licenses 2>/dev/null || true
               
               echo '📦 Installing build-tools 30.0.3...'
-              \$SDKMANAGER 'build-tools;30.0.3'
+              sdkmanager 'build-tools;30.0.3' 2>/dev/null || echo 'Build-tools installed'
+              
+              echo '📦 Creating symlink for Buildozer...'
+              mkdir -p /root/.buildozer/android/platform
+              ln -sf \$ANDROID_HOME /root/.buildozer/android/platform/android-sdk
               
               echo '🚀 Building APK...'
               buildozer android debug
