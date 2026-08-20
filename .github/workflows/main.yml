@@ -22,7 +22,7 @@ jobs:
             kivy/buildozer \
             -c "
               echo '📦 Setting up SDK manually...'
-              export ANDROID_HOME=/android-sdk
+              export ANDROID_HOME=/root/.buildozer/android/platform/android-sdk
               mkdir -p \$ANDROID_HOME
               
               echo '📦 Downloading command-line tools...'
@@ -30,6 +30,8 @@ jobs:
               unzip -q commandlinetools-linux-9477386_latest.zip
               mkdir -p \$ANDROID_HOME/cmdline-tools
               mv cmdline-tools \$ANDROID_HOME/cmdline-tools/latest
+              
+              # Add sdkmanager to PATH
               export PATH=\$ANDROID_HOME/cmdline-tools/latest/bin:\$PATH
               
               echo '📦 Accepting licenses...'
@@ -38,17 +40,13 @@ jobs:
               echo '📦 Installing build-tools 30.0.3...'
               sdkmanager 'build-tools;30.0.3' 2>/dev/null || echo 'Build-tools installed'
               
-              echo '📦 Creating symlink for Buildozer...'
-              mkdir -p /root/.buildozer/android/platform
-              rm -rf /root/.buildozer/android/platform/android-sdk
-              ln -sf \$ANDROID_HOME /root/.buildozer/android/platform/android-sdk
-              
-              # Create the tools/bin symlink Buildozer expects
-              mkdir -p /root/.buildozer/android/platform/android-sdk/tools/bin
-              ln -sf \$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager /root/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager
+              # Create the EXACT path Buildozer expects: tools/bin/sdkmanager
+              echo '📦 Creating symlink for sdkmanager...'
+              mkdir -p \$ANDROID_HOME/tools/bin
+              ln -sf \$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \$ANDROID_HOME/tools/bin/sdkmanager
               
               echo '📦 Verifying sdkmanager path...'
-              ls -la /root/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager
+              ls -la \$ANDROID_HOME/tools/bin/sdkmanager
               
               echo '🚀 Building APK...'
               buildozer android debug
