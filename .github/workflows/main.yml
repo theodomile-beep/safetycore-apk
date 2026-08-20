@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Fix apt sources (remove Azure mirrors)
+      - name: Fix apt sources
         run: |
           sudo sed -i 's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' /etc/apt/sources.list
           sudo apt-get update
@@ -43,7 +43,19 @@ jobs:
             echo "$BUILD_TOOLS_DIR" >> $GITHUB_PATH
           fi
 
-      - name: Build APK and save log
+      - name: Clean Buildozer cache (FORCE FRESH BUILD)
+        run: |
+          rm -rf ~/.buildozer/cache
+          rm -rf .buildozer
+          rm -f build.log
+
+      - name: Verify buildozer.spec contents
+        run: |
+          echo "=== buildozer.spec contents ==="
+          cat buildozer.spec
+          echo "==============================="
+
+      - name: Build APK
         run: |
           echo "⚙️ Build started at $(date)"
           buildozer -v android debug --bootstrap sdl2 2>&1 | tee build.log
