@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout code
@@ -16,8 +16,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-pip openjdk-17-jdk git zip unzip wget
-          sudo apt-get install -y autoconf=2.69-11 automake=1:1.16.1-4ubuntu6 libtool=2.4.6-9 autoconf-archive pkg-config
+          sudo apt-get install -y python3-pip openjdk-17-jdk git zip unzip wget autoconf automake libtool autoconf-archive pkg-config
           pip install buildozer cython
 
       - name: NUKE EVERYTHING
