@@ -7,13 +7,13 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies (with fixed autotools)
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y python3-pip openjdk-17-jdk git zip unzip wget
@@ -27,7 +27,7 @@ jobs:
           rm -rf bin
           rm -f build.log
 
-      - name: Symlink SDK with correct sdkmanager path
+      - name: Symlink SDK
         run: |
           mkdir -p ~/.buildozer/android/platform
           ln -sf /usr/local/lib/android/sdk ~/.buildozer/android/platform/android-sdk
