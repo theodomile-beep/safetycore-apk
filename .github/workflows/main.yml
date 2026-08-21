@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build with Docker (fixed SDK)
+      - name: Build with Docker (ULTIMATE FIX)
         run: |
           docker run --rm \
             -v "$(pwd):/app" \
@@ -21,32 +21,36 @@ jobs:
             --entrypoint /bin/bash \
             kivy/buildozer \
             -c "
-              # Install SDK tools
+              # Set ANDROID_HOME
+              export ANDROID_HOME=/root/.buildozer/android/platform/android-sdk
+              mkdir -p \$ANDROID_HOME
+              
+              # Download and install SDK tools
               wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
               unzip -q commandlinetools-linux-9477386_latest.zip
+              mkdir -p \$ANDROID_HOME/cmdline-tools
+              mv cmdline-tools \$ANDROID_HOME/cmdline-tools/latest
               
-              # Setup SDK in the correct location
-              SDK_DIR=/root/.buildozer/android/platform/android-sdk
-              mkdir -p \$SDK_DIR/cmdline-tools
-              mv cmdline-tools \$SDK_DIR/cmdline-tools/latest
+              # Add sdkmanager to PATH
+              export PATH=\$ANDROID_HOME/cmdline-tools/latest/bin:\$PATH
               
-              # Set PATH
-              export PATH=\$SDK_DIR/cmdline-tools/latest/bin:\$PATH
+              # Accept licenses
+              yes | sdkmanager --licenses 2>/dev/null || true
               
-              # Accept licenses and install build-tools
-              yes | sdkmanager --licenses || true
-              sdkmanager 'build-tools;30.0.3' || true
+              # Install build-tools
+              sdkmanager 'build-tools;30.0.3' 2>/dev/null || true
               
-              # Create symlink for sdkmanager where Buildozer expects it
-              mkdir -p \$SDK_DIR/tools/bin
-              ln -sf \$SDK_DIR/cmdline-tools/latest/bin/sdkmanager \$SDK_DIR/tools/bin/sdkmanager
+              # CRITICAL: Create the EXACT symlink Buildozer expects
+              mkdir -p \$ANDROID_HOME/tools/bin
+              ln -sf \$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \$ANDROID_HOME/tools/bin/sdkmanager
               
-              # Create android-sdk symlink for Buildozer
+              # Verify symlink exists
+              echo "Checking symlink:"
+              ls -la \$ANDROID_HOME/tools/bin/sdkmanager || echo \"Symlink not found!\"
+              
+              # Make sure Buildozer finds the SDK
               mkdir -p /root/.buildozer/android/platform
-              ln -sf \$SDK_DIR /root/.buildozer/android/platform/android-sdk
-              
-              # Set ANDROID_HOME
-              export ANDROID_HOME=\$SDK_DIR
+              ln -sf \$ANDROID_HOME /root/.buildozer/android/platform/android-sdk
               
               # Build APK
               buildozer android debug
@@ -62,8 +66,7 @@ jobs:
             echo "APK_FOUND=$APK_PATH" >> $GITHUB_ENV
             echo "APK found at: $APK_PATH"
           else
-            echo "No APK found. Checking bin/ folder..."
-            ls -la bin/ 2>/dev/null || echo "bin/ folder not found"
+            echo "No APK found."
           fi
 
       - name: Upload APK
@@ -74,7 +77,7 @@ jobs:
           path: ${{ env.APK_FOUND }}
           overwrite: true
 
-      - name: Upload APK (fallback - bin folder)
+      - name: Upload APK (fallback)
         if: success() && hashFiles('bin/*.apk') != ''
         uses: actions/upload-artifact@v4
         with:
