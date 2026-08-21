@@ -21,43 +21,38 @@ jobs:
             --entrypoint /bin/bash \
             kivy/buildozer \
             -c "
-              # Install wget and unzip
               apt-get update && apt-get install -y wget unzip
               
-              # Set ANDROID_HOME
               export ANDROID_HOME=/root/.buildozer/android/platform/android-sdk
               mkdir -p \$ANDROID_HOME
               
-              # Download and install SDK tools
               wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
               unzip -q commandlinetools-linux-9477386_latest.zip
               mkdir -p \$ANDROID_HOME/cmdline-tools
               mv cmdline-tools \$ANDROID_HOME/cmdline-tools/latest
               
-              # Add sdkmanager to PATH
               export PATH=\$ANDROID_HOME/cmdline-tools/latest/bin:\$PATH
               
-              # Accept licenses
               yes | sdkmanager --licenses 2>/dev/null || true
-              
-              # Install build-tools
               sdkmanager 'build-tools;30.0.3' 2>/dev/null || true
               
-              # Create the EXACT symlink Buildozer expects
               mkdir -p \$ANDROID_HOME/tools/bin
               ln -sf \$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \$ANDROID_HOME/tools/bin/sdkmanager
               
-              # Verify symlink exists
-              echo \"Checking symlink:\"
-              ls -la \$ANDROID_HOME/tools/bin/sdkmanager || echo \"Symlink not found!\"
-              
-              # Make sure Buildozer finds the SDK
               mkdir -p /root/.buildozer/android/platform
               ln -sf \$ANDROID_HOME /root/.buildozer/android/platform/android-sdk
               
-              # Build APK
-              buildozer android debug
+              buildozer android debug 2>&1 | tee /app/build.log
             "
+
+      - name: Print errors only
+        if: always()
+        run: |
+          echo "========================================="
+          echo "🔴 ERRORS FOUND IN BUILD:"
+          echo "========================================="
+          grep -E "ERROR:|Exception:|failed:|Traceback|Error\b" build.log | head -n 30 || echo "No errors found."
+          echo "========================================="
 
       - name: Upload APK
         if: success()
