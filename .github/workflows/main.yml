@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build with Docker
+      - name: Build with Docker (clean cache)
         run: |
           docker run --rm \
             -v "$(pwd):/app" \
@@ -21,28 +21,47 @@ jobs:
             --entrypoint /bin/bash \
             kivy/buildozer \
             -c "
+              # Install wget and unzip
               apt-get update && apt-get install -y wget unzip
               
+              # WIPE ALL CACHES
+              echo '🧹 Wiping all caches...'
+              rm -rf /root/.buildozer
+              rm -rf /app/.buildozer
+              rm -rf /app/bin
+              rm -rf /app/build.log
+              
+              # Set ANDROID_HOME
               export ANDROID_HOME=/root/.buildozer/android/platform/android-sdk
               mkdir -p \$ANDROID_HOME
               
+              # Download and install SDK tools
+              echo '📦 Downloading SDK tools...'
               wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
               unzip -q commandlinetools-linux-9477386_latest.zip
               mkdir -p \$ANDROID_HOME/cmdline-tools
               mv cmdline-tools \$ANDROID_HOME/cmdline-tools/latest
               
+              # Add sdkmanager to PATH
               export PATH=\$ANDROID_HOME/cmdline-tools/latest/bin:\$PATH
               
+              # Accept licenses and install build-tools
+              echo '📦 Accepting licenses...'
               yes | sdkmanager --licenses 2>/dev/null || true
               sdkmanager 'build-tools;30.0.3' 2>/dev/null || true
               
+              # Create symlink for sdkmanager
               mkdir -p \$ANDROID_HOME/tools/bin
               ln -sf \$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \$ANDROID_HOME/tools/bin/sdkmanager
               
+              # Create symlink for Buildozer
               mkdir -p /root/.buildozer/android/platform
               ln -sf \$ANDROID_HOME /root/.buildozer/android/platform/android-sdk
               
+              # Build APK
+              echo '🚀 Building APK...'
               buildozer android debug 2>&1 | tee /app/build.log
+              echo '✅ Build finished!'
             "
 
       - name: Print errors only
@@ -51,14 +70,35 @@ jobs:
           echo "========================================="
           echo "🔴 ERRORS FOUND IN BUILD:"
           echo "========================================="
-          grep -E "ERROR:|Exception:|failed:|Traceback|Error\b" build.log | head -n 30 || echo "No errors found."
+          grep -E "ERROR:|Exception:|failed:|Traceback|Error\b" build.log | head -n 30 || echo "✅ No errors found!"
           echo "========================================="
 
+      - name: Find APK
+        if: always()
+        run: |
+          echo "📁 Searching for APK files..."
+          find . -name "*.apk" -type f -exec ls -lh {} \;
+          APK_PATH=$(find . -name "*.apk" -type f | head -1)
+          if [ -n "$APK_PATH" ]; then
+            echo "APK_FOUND=$APK_PATH" >> $GITHUB_ENV
+            echo "✅ APK found at: $APK_PATH"
+          else
+            echo "❌ No APK found."
+          fi
+
       - name: Upload APK
-        if: success()
+        if: success() && env.APK_FOUND != ''
         uses: actions/upload-artifact@v4
         with:
           name: SafetyCore-APK
+          path: ${{ env.APK_FOUND }}
+          overwrite: true
+
+      - name: Upload APK (fallback - bin folder)
+        if: success() && hashFiles('bin/*.apk') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: SafetyCore-APK-bin
           path: bin/*.apk
           overwrite: true
 
