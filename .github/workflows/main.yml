@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build with Docker (ULTIMATE FIX)
+      - name: Build with Docker
         run: |
           docker run --rm \
             -v "$(pwd):/app" \
@@ -21,6 +21,9 @@ jobs:
             --entrypoint /bin/bash \
             kivy/buildozer \
             -c "
+              # Install wget and unzip
+              apt-get update && apt-get install -y wget unzip
+              
               # Set ANDROID_HOME
               export ANDROID_HOME=/root/.buildozer/android/platform/android-sdk
               mkdir -p \$ANDROID_HOME
@@ -40,12 +43,12 @@ jobs:
               # Install build-tools
               sdkmanager 'build-tools;30.0.3' 2>/dev/null || true
               
-              # CRITICAL: Create the EXACT symlink Buildozer expects
+              # Create the EXACT symlink Buildozer expects
               mkdir -p \$ANDROID_HOME/tools/bin
               ln -sf \$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \$ANDROID_HOME/tools/bin/sdkmanager
               
               # Verify symlink exists
-              echo "Checking symlink:"
+              echo \"Checking symlink:\"
               ls -la \$ANDROID_HOME/tools/bin/sdkmanager || echo \"Symlink not found!\"
               
               # Make sure Buildozer finds the SDK
@@ -56,32 +59,11 @@ jobs:
               buildozer android debug
             "
 
-      - name: Find and upload APK
-        if: success()
-        run: |
-          echo "Searching for APK files..."
-          find . -name "*.apk" -type f -exec ls -lh {} \;
-          APK_PATH=$(find . -name "*.apk" -type f | head -1)
-          if [ -n "$APK_PATH" ]; then
-            echo "APK_FOUND=$APK_PATH" >> $GITHUB_ENV
-            echo "APK found at: $APK_PATH"
-          else
-            echo "No APK found."
-          fi
-
       - name: Upload APK
-        if: success() && env.APK_FOUND != ''
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: SafetyCore-APK
-          path: ${{ env.APK_FOUND }}
-          overwrite: true
-
-      - name: Upload APK (fallback)
-        if: success() && hashFiles('bin/*.apk') != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: SafetyCore-APK-bin
           path: bin/*.apk
           overwrite: true
 
