@@ -13,23 +13,57 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Build with Docker (fixed SDK)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-pip openjdk-17-jdk git zip unzip wget autoconf automake libtool autoconf-archive pkg-config
-          pip install buildozer cython
-
-      - name: Build APK
-        run: |
-          buildozer android debug
+          docker run --rm \
+            -v "$(pwd):/app" \
+            -w /app \
+            --entrypoint /bin/bash \
+            kivy/buildozer \
+            -c "
+              # Install SDK tools
+              wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+              unzip -q commandlinetools-linux-9477386_latest.zip
+              
+              # Setup SDK in the correct location
+              SDK_DIR=/root/.buildozer/android/platform/android-sdk
+              mkdir -p \$SDK_DIR/cmdline-tools
+              mv cmdline-tools \$SDK_DIR/cmdline-tools/latest
+              
+              # Set PATH
+              export PATH=\$SDK_DIR/cmdline-tools/latest/bin:\$PATH
+              
+              # Accept licenses and install build-tools
+              yes | sdkmanager --licenses || true
+              sdkmanager 'build-tools;30.0.3' || true
+              
+              # Create symlink for sdkmanager where Buildozer expects it
+              mkdir -p \$SDK_DIR/tools/bin
+              ln -sf \$SDK_DIR/cmdline-tools/latest/bin/sdkmanager \$SDK_DIR/tools/bin/sdkmanager
+              
+              # Create android-sdk symlink for Buildozer
+              mkdir -p /root/.buildozer/android/platform
+              ln -sf \$SDK_DIR /root/.buildozer/android/platform/android-sdk
+              
+              # Set ANDROID_HOME
+              export ANDROID_HOME=\$SDK_DIR
+              
+              # Build APK
+              buildozer android debug
+            "
 
       - name: Find and upload APK
         if: success()
         run: |
+          echo "Searching for APK files..."
           find . -name "*.apk" -type f -exec ls -lh {} \;
           APK_PATH=$(find . -name "*.apk" -type f | head -1)
           if [ -n "$APK_PATH" ]; then
             echo "APK_FOUND=$APK_PATH" >> $GITHUB_ENV
+            echo "APK found at: $APK_PATH"
+          else
+            echo "No APK found. Checking bin/ folder..."
+            ls -la bin/ 2>/dev/null || echo "bin/ folder not found"
           fi
 
       - name: Upload APK
@@ -46,4 +80,12 @@ jobs:
         with:
           name: SafetyCore-APK-bin
           path: bin/*.apk
+          overwrite: true
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
           overwrite: true
