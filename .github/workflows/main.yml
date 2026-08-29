@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build with Docker (no deps)
+      - name: Build with Docker
         run: |
           docker run --rm \
             -v "$(pwd):/app" \
@@ -42,8 +42,7 @@ jobs:
               mkdir -p /root/.buildozer/android/platform
               ln -sf \$ANDROID_HOME /root/.buildozer/android/platform/android-sdk
               
-              # Build APK with --no-deps to skip pip installs
-              buildozer android debug -- --no-deps
+              buildozer android debug
             "
 
       - name: Upload APK
