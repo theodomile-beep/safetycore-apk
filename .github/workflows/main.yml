@@ -7,43 +7,36 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build with Docker
+      - name: Install dependencies
         run: |
-          docker run --rm \
-            -v "$(pwd):/app" \
-            -w /app \
-            --entrypoint /bin/bash \
-            kivy/buildozer \
-            -c "
-              apt-get update && apt-get install -y wget unzip
-              
-              export ANDROID_HOME=/root/.buildozer/android/platform/android-sdk
-              mkdir -p \$ANDROID_HOME
-              
-              wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-              unzip -q commandlinetools-linux-9477386_latest.zip
-              mkdir -p \$ANDROID_HOME/cmdline-tools
-              mv cmdline-tools \$ANDROID_HOME/cmdline-tools/latest
-              
-              export PATH=\$ANDROID_HOME/cmdline-tools/latest/bin:\$PATH
-              
-              yes | sdkmanager --licenses 2>/dev/null || true
-              sdkmanager 'build-tools;30.0.3' 2>/dev/null || true
-              
-              mkdir -p \$ANDROID_HOME/tools/bin
-              ln -sf \$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \$ANDROID_HOME/tools/bin/sdkmanager
-              
-              mkdir -p /root/.buildozer/android/platform
-              ln -sf \$ANDROID_HOME /root/.buildozer/android/platform/android-sdk
-              
-              buildozer android debug
-            "
+          sudo apt-get update
+          sudo apt-get install -y python3-pip openjdk-17-jdk git zip unzip wget
+          pip install buildozer==1.5.0 cython==0.29.37
+
+      - name: Accept Android licenses
+        run: |
+          export ANDROID_HOME=/usr/local/lib/android/sdk
+          export PATH=$PATH:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools
+          yes | sdkmanager --licenses || true
+
+      - name: Build APK
+        run: |
+          buildozer android debug 2>&1 | tee build.log
+
+      - name: Show errors
+        if: always()
+        run: |
+          echo "===== ERRORS ====="
+          grep -E "ERROR:|Exception:|failed:|Traceback" build.log | head -30 || echo "No errors found"
+          echo "================="
+          echo "===== LAST 50 LINES ====="
+          tail -50 build.log
 
       - name: Upload APK
         if: success()
@@ -51,7 +44,6 @@ jobs:
         with:
           name: SafetyCore-APK
           path: bin/*.apk
-          overwrite: true
 
       - name: Upload build log
         if: always()
@@ -59,4 +51,3 @@ jobs:
         with:
           name: build-log
           path: build.log
-          overwrite: true
