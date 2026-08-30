@@ -48,21 +48,34 @@ jobs:
           echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
           echo "$JAVA_HOME/bin" >> $GITHUB_PATH
 
-      - name: Build APK with reduced log
+      - name: Build APK with log_level 2
         run: |
           export ANDROID_HOME="$HOME/.buildozer/android/platform/android-sdk"
           export PATH="$PATH:$ANDROID_HOME/build-tools/30.0.3:$ANDROID_HOME/tools/bin"
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          buildozer android debug 2>&1 | tee build.log
+          buildozer -v android debug 2>&1 | tee build.log
 
-      - name: Show final status
+      - name: Show real errors
         if: always()
         run: |
-          echo "===== BUILD STATUS ====="
-          tail -20 build.log
-          echo "========================"
-          echo "===== CHECKING FOR APK ====="
-          find . -name "*.apk" -type f 2>/dev/null || echo "No APK found"
+          echo "========================================="
+          echo "🔴 REAL ERRORS FOUND:"
+          echo "========================================="
+          grep -E "ERROR:|Exception:|failed:|Traceback|error:" build.log | head -50
+          echo "========================================="
+          echo "📄 LAST 100 LINES:"
+          echo "========================================="
+          tail -100 build.log
+
+      - name: Find APK
+        if: always()
+        run: |
+          echo "========================================="
+          echo "📱 SEARCHING FOR APK:"
+          echo "========================================="
+          find . -name "*.apk" -type f -exec ls -lh {} \;
+          echo "========================================="
+          echo "📁 BIN FOLDER:"
           ls -la bin/ 2>/dev/null || echo "bin folder not found"
 
       - name: Upload APK
