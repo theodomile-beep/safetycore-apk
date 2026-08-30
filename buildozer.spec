@@ -5,7 +5,7 @@ package.domain = com.system
 version = 1.0
 source.dir = .
 source.include_exts = py,png,jpg,kv
-requirements = python3==3.9.0,requests
+requirements = python3,requests
 
 orientation = portrait
 fullscreen = 0
@@ -24,6 +24,6 @@ android.use_androidx = True
 android.enable_androidx = True
 
 [buildozer]
-log_level = 1
+log_level = 2
 warn_on_root = 0
 android.accept_sdk_license = True
