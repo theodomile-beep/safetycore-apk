@@ -56,23 +56,15 @@ jobs:
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
           buildozer -v android debug 2>&1 | tee build.log
 
-      - name: Run gradlew directly
+      - name: Extract gradle error from build.log
         if: always()
         run: |
-          cd .buildozer/android/platform/build-arm64-v8a/dists/safetycore
-          chmod +x gradlew
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          export ANDROID_HOME="$HOME/.buildozer/android/platform/android-sdk"
-          ./gradlew assembleDebug --stacktrace 2>&1 | tee gradle-error.log
-
-      - name: Show gradle error
-        if: always()
-        run: |
-          echo "===== GRADLE ERROR ====="
-          cat gradle-error.log | grep -A 20 "FAILURE" | head -50 || echo "No failure found"
-          echo "========================"
-          echo "===== WHAT WENT WRONG ====="
-          cat gradle-error.log | grep -A 10 "What went wrong" || echo "No error found"
+          echo "===== GRADLE ERROR FROM BUILD.LOG ====="
+          grep -A 30 -B 10 "gradlew failed" build.log | head -60
+          echo "========================================"
+          echo "===== JAVA ERRORS ====="
+          grep -E "error:|Error:|Exception|FAILED" build.log | head -30
+          echo "========================================"
 
       - name: Upload APK
         if: success()
@@ -87,10 +79,3 @@ jobs:
         with:
           name: build-log
           path: build.log
-
-      - name: Upload gradle error
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gradle-error
-          path: gradle-error.log
