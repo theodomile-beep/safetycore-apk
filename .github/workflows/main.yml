@@ -47,7 +47,6 @@ jobs:
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
           echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
           echo "$JAVA_HOME/bin" >> $GITHUB_PATH
-          java -version
 
       - name: Build APK
         run: |
@@ -56,15 +55,14 @@ jobs:
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
           buildozer -v android debug 2>&1 | tee build.log
 
-      - name: Extract gradle error from build.log
+      - name: Patch HIDDeviceManager if exists
         if: always()
         run: |
-          echo "===== GRADLE ERROR FROM BUILD.LOG ====="
-          grep -A 30 -B 10 "gradlew failed" build.log | head -60
-          echo "========================================"
-          echo "===== JAVA ERRORS ====="
-          grep -E "error:|Error:|Exception|FAILED" build.log | head -30
-          echo "========================================"
+          HID_FILE=".buildozer/android/platform/build-arm64-v8a/dists/safetycore/src/main/java/org/libsdl/app/HIDDeviceManager.java"
+          if [ -f "$HID_FILE" ]; then
+            echo "Patching HIDDeviceManager.java..."
+            sed -i '364s/.*/        return null;/' "$HID_FILE" || true
+          fi
 
       - name: Upload APK
         if: success()
