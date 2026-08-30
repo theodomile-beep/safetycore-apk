@@ -16,7 +16,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-pip openjdk-17-jdk git zip unzip wget
+          sudo apt-get install -y python3-pip openjdk-17-jdk git zip unzip wget autoconf automake libtool zlib1g-dev
           pip install buildozer==1.5.0 cython==0.29.37
 
       - name: Setup Android SDK
@@ -47,36 +47,23 @@ jobs:
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
           echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
           echo "$JAVA_HOME/bin" >> $GITHUB_PATH
+          java -version
 
-      - name: Build APK with log_level 2
+      - name: Build APK
         run: |
           export ANDROID_HOME="$HOME/.buildozer/android/platform/android-sdk"
           export PATH="$PATH:$ANDROID_HOME/build-tools/30.0.3:$ANDROID_HOME/tools/bin"
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
           buildozer -v android debug 2>&1 | tee build.log
 
-      - name: Show real errors
+      - name: Show errors
         if: always()
         run: |
-          echo "========================================="
-          echo "🔴 REAL ERRORS FOUND:"
-          echo "========================================="
-          grep -E "ERROR:|Exception:|failed:|Traceback|error:" build.log | head -50
-          echo "========================================="
-          echo "📄 LAST 100 LINES:"
-          echo "========================================="
-          tail -100 build.log
-
-      - name: Find APK
-        if: always()
-        run: |
-          echo "========================================="
-          echo "📱 SEARCHING FOR APK:"
-          echo "========================================="
-          find . -name "*.apk" -type f -exec ls -lh {} \;
-          echo "========================================="
-          echo "📁 BIN FOLDER:"
-          ls -la bin/ 2>/dev/null || echo "bin folder not found"
+          echo "===== ERRORS ====="
+          grep -E "ERROR:|Exception:|failed:|Traceback" build.log | head -20 || echo "No errors"
+          echo "================="
+          echo "===== LAST 50 LINES ====="
+          tail -50 build.log
 
       - name: Upload APK
         if: success()
