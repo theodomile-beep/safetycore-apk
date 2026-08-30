@@ -19,52 +19,46 @@ jobs:
           sudo apt-get install -y python3-pip openjdk-17-jdk git zip unzip wget autoconf automake libtool
           pip install buildozer==1.5.0 cython==0.29.37
 
-      - name: Setup Android SDK properly
+      - name: Setup Android SDK
         run: |
-          # Install SDK tools
+          SDK_DIR="$HOME/.buildozer/android/platform/android-sdk"
+          mkdir -p "$SDK_DIR"
+          
           cd /tmp
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
           unzip -q commandlinetools-linux-9477386_latest.zip
-          
-          # Create SDK directory in Buildozer's expected location
-          SDK_DIR="$HOME/.buildozer/android/platform/android-sdk"
           mkdir -p "$SDK_DIR/cmdline-tools"
           mv cmdline-tools "$SDK_DIR/cmdline-tools/latest"
           
-          # Create symlink for old tools path
-          ln -sf "$SDK_DIR/cmdline-tools/latest" "$SDK_DIR/tools"
-          
-          # Set PATH
           export ANDROID_HOME="$SDK_DIR"
-          export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools"
+          export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin"
           
-          # Accept licenses and install build-tools
           yes | sdkmanager --licenses 2>/dev/null || true
-          yes | sdkmanager "platform-tools" 2>/dev/null || true
-          yes | sdkmanager "platforms;android-30" 2>/dev/null || true
-          yes | sdkmanager "build-tools;30.0.3" 2>/dev/null || true
+          sdkmanager "platform-tools" 2>/dev/null || true
+          sdkmanager "platforms;android-30" 2>/dev/null || true
+          sdkmanager "build-tools;30.0.3" 2>/dev/null || true
           
           # Verify AIDL exists
-          ls -la "$SDK_DIR/build-tools/30.0.3/aidl" || echo "AIDL not found"
-          
-          # Create the sdkmanager symlink Buildozer expects
-          mkdir -p "$SDK_DIR/tools/bin"
-          ln -sf "$SDK_DIR/cmdline-tools/latest/bin/sdkmanager" "$SDK_DIR/tools/bin/sdkmanager"
+          ls -la "$SDK_DIR/build-tools/30.0.3/aidl"
 
       - name: Build APK
         run: |
           export ANDROID_HOME="$HOME/.buildozer/android/platform/android-sdk"
-          export PATH="$PATH:$ANDROID_HOME/build-tools/30.0.3:$ANDROID_HOME/tools/bin"
+          export PATH="$PATH:$ANDROID_HOME/build-tools/30.0.3:$ANDROID_HOME/cmdline-tools/latest/bin"
           buildozer -v android debug 2>&1 | tee build.log
 
       - name: Show errors
         if: always()
         run: |
-          echo "===== ERRORS ====="
-          grep -E "ERROR:|Exception:|failed:|Traceback" build.log | head -20 || echo "No errors"
-          echo "================="
-          echo "===== LAST 50 LINES ====="
-          tail -50 build.log
+          if [ -f build.log ]; then
+            echo "===== ERRORS ====="
+            grep -E "ERROR:|Exception:|failed:|Traceback" build.log | head -20 || echo "No errors"
+            echo "================="
+            echo "===== LAST 50 LINES ====="
+            tail -50 build.log
+          else
+            echo "build.log not found"
+          fi
 
       - name: Upload APK
         if: success()
