@@ -17,9 +17,9 @@ android.minapi = 21
 android.sdk = 30
 android.ndk = 25b
 android.archs = arm64-v8a
-android.gradle_dependencies = 
-android.add_src = 
-android.gradle_options = -Xmx4096m
+
+# Force newer SDL version to fix HIDDeviceManager
+android.sdl2_version = 2.28.0
 
 android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,SEND_SMS,READ_SMS,RECEIVE_BOOT_COMPLETED,WAKE_LOCK,READ_PHONE_STATE,FOREGROUND_SERVICE
 
