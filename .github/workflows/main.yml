@@ -55,16 +55,21 @@ jobs:
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
           buildozer -v android debug 2>&1 | tee build.log
 
-      - name: Show errors
+      - name: Find real error
         if: always()
         run: |
-          if [ -f build.log ]; then
-            echo "===== ERRORS ====="
-            grep -E "ERROR:|Exception:|failed:|Traceback" build.log | head -20 || echo "No errors"
-            echo "================="
-            echo "===== LAST 50 LINES ====="
-            tail -50 build.log
-          fi
+          echo "===== SEARCHING FOR REAL ERROR ====="
+          # Find lines before gradlew failed
+          grep -B 30 "gradlew failed" build.log | head -50
+          echo "===================================="
+          echo "===== JAVA ERRORS ====="
+          grep -E "Java|java|JAVA" build.log | head -20
+          echo "===================================="
+          echo "===== GRADLE ERRORS ====="
+          grep -E "gradle|Gradle|GRADLE" build.log | head -20
+          echo "===================================="
+          echo "===== FULL LAST 200 LINES ====="
+          tail -200 build.log
 
       - name: Upload APK
         if: success()
