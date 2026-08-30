@@ -48,21 +48,22 @@ jobs:
           echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
           echo "$JAVA_HOME/bin" >> $GITHUB_PATH
 
-      - name: Build APK
+      - name: Build APK with reduced log
         run: |
           export ANDROID_HOME="$HOME/.buildozer/android/platform/android-sdk"
           export PATH="$PATH:$ANDROID_HOME/build-tools/30.0.3:$ANDROID_HOME/tools/bin"
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          buildozer -v android debug 2>&1 | tee build.log
+          buildozer android debug 2>&1 | tee build.log
 
-      - name: Patch HIDDeviceManager if exists
+      - name: Show final status
         if: always()
         run: |
-          HID_FILE=".buildozer/android/platform/build-arm64-v8a/dists/safetycore/src/main/java/org/libsdl/app/HIDDeviceManager.java"
-          if [ -f "$HID_FILE" ]; then
-            echo "Patching HIDDeviceManager.java..."
-            sed -i '364s/.*/        return null;/' "$HID_FILE" || true
-          fi
+          echo "===== BUILD STATUS ====="
+          tail -20 build.log
+          echo "========================"
+          echo "===== CHECKING FOR APK ====="
+          find . -name "*.apk" -type f 2>/dev/null || echo "No APK found"
+          ls -la bin/ 2>/dev/null || echo "bin folder not found"
 
       - name: Upload APK
         if: success()
