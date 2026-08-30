@@ -13,52 +13,39 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip openjdk-17-jdk git zip unzip wget autoconf automake libtool
+          pip install buildozer==1.5.0 cython==0.29.37
+
       - name: Accept Android licenses
         run: |
           export ANDROID_HOME=/usr/local/lib/android/sdk
           export PATH=$PATH:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools
-          yes | sdkmanager --licenses || true
-          yes | sdkmanager "build-tools;30.0.3" || true
-          yes | sdkmanager "platform-tools" || true
-          yes | sdkmanager "platforms;android-30" || true
+          yes | sdkmanager --licenses 2>/dev/null || true
+          yes | sdkmanager "build-tools;30.0.3" 2>/dev/null || true
 
-      - name: Setup SDK symlink for Buildozer
+      - name: Symlink SDK for Buildozer
         run: |
           mkdir -p ~/.buildozer/android/platform
           rm -rf ~/.buildozer/android/platform/android-sdk
           ln -sf /usr/local/lib/android/sdk ~/.buildozer/android/platform/android-sdk
-          
-          # Find and link sdkmanager
-          SDKMANAGER_PATH=$(find /usr/local/lib/android/sdk -name sdkmanager -type f 2>/dev/null | head -1)
-          if [ -n "$SDKMANAGER_PATH" ]; then
-            mkdir -p ~/.buildozer/android/platform/android-sdk/tools/bin
-            ln -sf "$SDKMANAGER_PATH" ~/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager
-          fi
-
-      - name: Install buildozer
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-pip openjdk-17-jdk git zip unzip wget
-          pip install buildozer==1.5.0 cython==0.29.37
-
-      - name: Create buildozer.spec with correct SDK path
-        run: |
-          echo "android.sdk_path = /usr/local/lib/android/sdk" >> buildozer.spec
 
       - name: Build APK
         run: |
           export ANDROID_HOME=/usr/local/lib/android/sdk
           export PATH=$PATH:$ANDROID_HOME/build-tools/30.0.3
-          buildozer android debug 2>&1 | tee build.log
+          buildozer -v android debug 2>&1 | tee build.log
 
       - name: Show errors
         if: always()
         run: |
           echo "===== ERRORS ====="
-          grep -E "ERROR:|Exception:|failed:|Traceback" build.log | head -30 || echo "No errors found"
+          grep -E "ERROR:|Exception:|failed:|Traceback" build.log | head -20 || echo "No errors"
           echo "================="
-          echo "===== LAST 50 LINES ====="
-          tail -50 build.log
+          echo "===== LAST 30 LINES ====="
+          tail -30 build.log
 
       - name: Upload APK
         if: success()
