@@ -28,26 +28,19 @@ jobs:
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
           unzip -q commandlinetools-linux-9477386_latest.zip
           
-          # Install to cmdline-tools/latest
           mkdir -p "$SDK_DIR/cmdline-tools"
           mv cmdline-tools "$SDK_DIR/cmdline-tools/latest"
           
-          # CRITICAL: Create symlink for tools/bin/sdkmanager
           mkdir -p "$SDK_DIR/tools/bin"
           ln -sf "$SDK_DIR/cmdline-tools/latest/bin/sdkmanager" "$SDK_DIR/tools/bin/sdkmanager"
           
           export ANDROID_HOME="$SDK_DIR"
           export PATH="$PATH:$SDK_DIR/cmdline-tools/latest/bin:$SDK_DIR/tools/bin"
           
-          # Accept licenses and install build-tools
           yes | sdkmanager --licenses 2>/dev/null || true
           sdkmanager "platform-tools" 2>/dev/null || true
           sdkmanager "platforms;android-30" 2>/dev/null || true
           sdkmanager "build-tools;30.0.3" 2>/dev/null || true
-          
-          # Verify
-          ls -la "$SDK_DIR/tools/bin/sdkmanager"
-          ls -la "$SDK_DIR/build-tools/30.0.3/aidl"
 
       - name: Build APK
         run: |
@@ -55,16 +48,17 @@ jobs:
           export PATH="$PATH:$ANDROID_HOME/build-tools/30.0.3:$ANDROID_HOME/tools/bin"
           buildozer -v android debug 2>&1 | tee build.log
 
-      - name: Show errors
+      - name: Show Gradle error
         if: always()
         run: |
-          if [ -f build.log ]; then
-            echo "===== ERRORS ====="
-            grep -E "ERROR:|Exception:|failed:|Traceback" build.log | head -20 || echo "No errors"
-            echo "================="
-            echo "===== LAST 50 LINES ====="
-            tail -50 build.log
-          fi
+          echo "===== GRADLE ERROR DETAILS ====="
+          grep -A 50 -B 10 "gradlew failed" build.log || echo "No gradlew error"
+          echo "================================="
+          echo "===== JAVA/GRADLE ERRORS ====="
+          grep -E "FAILED|error:|Error:|Exception|Could not" build.log | head -30
+          echo "================================="
+          echo "===== LAST 100 LINES ====="
+          tail -100 build.log
 
       - name: Upload APK
         if: success()
