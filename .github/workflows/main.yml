@@ -42,26 +42,29 @@ jobs:
           sdkmanager "platforms;android-30" 2>/dev/null || true
           sdkmanager "build-tools;30.0.3" 2>/dev/null || true
 
+      - name: Set Java 17
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+          echo "$JAVA_HOME/bin" >> $GITHUB_PATH
+
       - name: Build APK
         run: |
           export ANDROID_HOME="$HOME/.buildozer/android/platform/android-sdk"
           export PATH="$PATH:$ANDROID_HOME/build-tools/30.0.3:$ANDROID_HOME/tools/bin"
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
           buildozer -v android debug 2>&1 | tee build.log
 
-      - name: Run gradlew directly to see error
+      - name: Show errors
         if: always()
         run: |
-          cd .buildozer/android/platform/build-arm64-v8a/dists/safetycore
-          chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace 2>&1 | tee gradle-error.log
-          cd ../../../../../
-
-      - name: Show gradle error
-        if: always()
-        run: |
-          echo "===== GRADLE ERROR ====="
-          cat gradle-error.log 2>/dev/null || echo "No gradle log"
-          echo "======================="
+          if [ -f build.log ]; then
+            echo "===== ERRORS ====="
+            grep -E "ERROR:|Exception:|failed:|Traceback" build.log | head -20 || echo "No errors"
+            echo "================="
+            echo "===== LAST 50 LINES ====="
+            tail -50 build.log
+          fi
 
       - name: Upload APK
         if: success()
@@ -76,10 +79,3 @@ jobs:
         with:
           name: build-log
           path: build.log
-
-      - name: Upload gradle error log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gradle-error-log
-          path: gradle-error.log
