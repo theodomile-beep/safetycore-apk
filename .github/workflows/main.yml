@@ -47,6 +47,7 @@ jobs:
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
           echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
           echo "$JAVA_HOME/bin" >> $GITHUB_PATH
+          java -version
 
       - name: Build APK
         run: |
@@ -55,21 +56,23 @@ jobs:
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
           buildozer -v android debug 2>&1 | tee build.log
 
-      - name: Find real error
+      - name: Run gradlew directly
         if: always()
         run: |
-          echo "===== SEARCHING FOR REAL ERROR ====="
-          # Find lines before gradlew failed
-          grep -B 30 "gradlew failed" build.log | head -50
-          echo "===================================="
-          echo "===== JAVA ERRORS ====="
-          grep -E "Java|java|JAVA" build.log | head -20
-          echo "===================================="
-          echo "===== GRADLE ERRORS ====="
-          grep -E "gradle|Gradle|GRADLE" build.log | head -20
-          echo "===================================="
-          echo "===== FULL LAST 200 LINES ====="
-          tail -200 build.log
+          cd .buildozer/android/platform/build-arm64-v8a/dists/safetycore
+          chmod +x gradlew
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          export ANDROID_HOME="$HOME/.buildozer/android/platform/android-sdk"
+          ./gradlew assembleDebug --stacktrace 2>&1 | tee gradle-error.log
+
+      - name: Show gradle error
+        if: always()
+        run: |
+          echo "===== GRADLE ERROR ====="
+          cat gradle-error.log | grep -A 20 "FAILURE" | head -50 || echo "No failure found"
+          echo "========================"
+          echo "===== WHAT WENT WRONG ====="
+          cat gradle-error.log | grep -A 10 "What went wrong" || echo "No error found"
 
       - name: Upload APK
         if: success()
@@ -84,3 +87,10 @@ jobs:
         with:
           name: build-log
           path: build.log
+
+      - name: Upload gradle error
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-error
+          path: gradle-error.log
